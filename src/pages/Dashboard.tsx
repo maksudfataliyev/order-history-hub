@@ -1,13 +1,19 @@
 import { useState } from 'react';
-import { Package, MessageSquare, RefreshCw, Settings, Plus } from 'lucide-react';
+import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { mockProducts } from '@/data/products';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 const myListings = mockProducts.slice(0, 3).map((p, i) => ({
   ...p,
@@ -26,9 +32,79 @@ const mockOffers = [
   { id: '3', from: 'Kamran S.', type: 'barter', item: 'Office Desk', forItem: 'Vintage Chair', status: 'accepted' },
 ];
 
+// Schemas for settings forms
+const passwordSchema = z.object({
+  currentPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
+  confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+const phoneSchema = z.object({
+  phone: z.string().min(10, 'Please enter a valid phone number'),
+});
+
+type PasswordFormValues = z.infer<typeof passwordSchema>;
+type PhoneFormValues = z.infer<typeof phoneSchema>;
+
 const Dashboard = () => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('listings');
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
+  const [isPhoneLoading, setIsPhoneLoading] = useState(false);
+
+  const passwordForm = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+  });
+
+  const phoneForm = useForm<PhoneFormValues>({
+    resolver: zodResolver(phoneSchema),
+    defaultValues: { phone: '' },
+  });
+
+  const onPasswordSubmit = async (data: PasswordFormValues) => {
+    setIsPasswordLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      toast({
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
+      });
+      passwordForm.reset();
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to update password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPasswordLoading(false);
+    }
+  };
+
+  const onPhoneSubmit = async (data: PhoneFormValues) => {
+    setIsPhoneLoading(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      toast({
+        title: "Phone updated",
+        description: "Your phone number has been changed successfully.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to update phone number. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPhoneLoading(false);
+    }
+  };
 
   const stats = [
     { label: t.dashboard.active, value: 2, color: 'bg-sage' },
@@ -81,6 +157,10 @@ const Dashboard = () => {
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">{t.dashboard.offers}</span>
               <Badge className="ml-1 bg-sage text-sage-dark">2</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="w-4 h-4" />
+              <span className="hidden sm:inline">{t.dashboard.settings}</span>
             </TabsTrigger>
           </TabsList>
 
@@ -183,6 +263,131 @@ const Dashboard = () => {
                   )}
                 </div>
               ))}
+            </div>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="mt-6">
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Change Password */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="font-display text-xl font-semibold text-foreground mb-4">
+                  Change Password
+                </h3>
+                <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword">Current Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="currentPassword"
+                        type={showCurrentPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        disabled={isPasswordLoading}
+                        className={cn(passwordForm.formState.errors.currentPassword && "border-destructive")}
+                        {...passwordForm.register("currentPassword")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      >
+                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    {passwordForm.formState.errors.currentPassword && (
+                      <p className="text-xs text-destructive">{passwordForm.formState.errors.currentPassword.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        disabled={isPasswordLoading}
+                        className={cn(passwordForm.formState.errors.newPassword && "border-destructive")}
+                        {...passwordForm.register("newPassword")}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                    </div>
+                    {passwordForm.formState.errors.newPassword && (
+                      <p className="text-xs text-destructive">{passwordForm.formState.errors.newPassword.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      placeholder="••••••••"
+                      disabled={isPasswordLoading}
+                      className={cn(passwordForm.formState.errors.confirmPassword && "border-destructive")}
+                      {...passwordForm.register("confirmPassword")}
+                    />
+                    {passwordForm.formState.errors.confirmPassword && (
+                      <p className="text-xs text-destructive">{passwordForm.formState.errors.confirmPassword.message}</p>
+                    )}
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={isPasswordLoading}>
+                    {isPasswordLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Password"
+                    )}
+                  </Button>
+                </form>
+              </div>
+
+              {/* Change Phone Number */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="font-display text-xl font-semibold text-foreground mb-4">
+                  Change Phone Number
+                </h3>
+                <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">New Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+994 XX XXX XX XX"
+                      disabled={isPhoneLoading}
+                      className={cn(phoneForm.formState.errors.phone && "border-destructive")}
+                      {...phoneForm.register("phone")}
+                    />
+                    {phoneForm.formState.errors.phone && (
+                      <p className="text-xs text-destructive">{phoneForm.formState.errors.phone.message}</p>
+                    )}
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={isPhoneLoading}>
+                    {isPhoneLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Phone Number"
+                    )}
+                  </Button>
+                </form>
+              </div>
             </div>
           </TabsContent>
         </Tabs>

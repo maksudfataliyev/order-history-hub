@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Scale, User, Plus, Home, Grid3X3 } from 'lucide-react';
+import { Menu, X, Scale, User, Plus, Home, Grid3X3, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompare } from '@/contexts/CompareContext';
@@ -62,6 +62,14 @@ export const Navbar = () => {
 
           {/* Right Side */}
           <div className="flex items-center gap-2">
+            {/* Login Button */}
+            <Link to="/auth" className="hidden md:block">
+              <Button variant="outline" size="sm" className="gap-2">
+                <LogIn className="w-4 h-4" />
+                {t.nav.login}
+              </Button>
+            </Link>
+
             {/* Compare Button */}
             <Link to="/compare">
               <Button variant="ghost" size="icon" className="relative">
@@ -122,6 +130,17 @@ export const Navbar = () => {
                   </Button>
                 </Link>
               ))}
+
+              {/* Mobile Login Button */}
+              <Link to="/auth" onClick={() => setIsOpen(false)}>
+                <Button
+                  variant="outline"
+                  className="w-full justify-start gap-3 mt-2"
+                >
+                  <LogIn className="w-5 h-5" />
+                  {t.nav.login}
+                </Button>
+              </Link>
               
               {/* Mobile Language Switcher */}
               <div className="flex items-center gap-2 pt-4 border-t border-border mt-2">

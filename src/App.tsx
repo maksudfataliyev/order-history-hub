@@ -11,6 +11,7 @@ import ProductDetail from "./pages/ProductDetail";
 import Upload from "./pages/Upload";
 import Dashboard from "./pages/Dashboard";
 import Compare from "./pages/Compare";
+import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/upload" element={<Upload />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/compare" element={<Compare />} />
+              <Route path="/auth" element={<AuthPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
