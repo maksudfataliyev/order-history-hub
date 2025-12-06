@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { mockProducts } from '@/data/products';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -32,30 +33,39 @@ const mockOffers = [
   { id: '3', from: 'Kamran S.', type: 'barter', item: 'Office Desk', forItem: 'Vintage Chair', status: 'accepted' },
 ];
 
-// Schemas for settings forms
-const passwordSchema = z.object({
-  currentPassword: z.string().min(8, 'Password must be at least 8 characters'),
-  newPassword: z.string().min(8, 'Password must be at least 8 characters'),
-  confirmPassword: z.string().min(8, 'Password must be at least 8 characters'),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-const phoneSchema = z.object({
-  phone: z.string().min(10, 'Please enter a valid phone number'),
-});
-
-type PasswordFormValues = z.infer<typeof passwordSchema>;
-type PhoneFormValues = z.infer<typeof phoneSchema>;
-
 const Dashboard = () => {
   const { t } = useLanguage();
+  const { user, isAuthenticated, updatePassword, updatePhone, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('listings');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
   const [isPhoneLoading, setIsPhoneLoading] = useState(false);
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/auth');
+    }
+  }, [isAuthenticated, navigate]);
+
+  // Schemas for settings forms
+  const passwordSchema = z.object({
+    currentPassword: z.string().min(8, t.dashboard.currentPassword + ' ' + t.auth?.errors?.passwordMin || 'Password must be at least 8 characters'),
+    newPassword: z.string().min(8, t.dashboard.newPassword + ' ' + t.auth?.errors?.passwordMin || 'Password must be at least 8 characters'),
+    confirmPassword: z.string().min(8, t.dashboard.confirmPassword + ' ' + t.auth?.errors?.passwordMin || 'Password must be at least 8 characters'),
+  }).refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
+
+  const phoneSchema = z.object({
+    phone: z.string().min(10, 'Please enter a valid phone number'),
+  });
+
+  type PasswordFormValues = z.infer<typeof passwordSchema>;
+  type PhoneFormValues = z.infer<typeof phoneSchema>;
 
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
@@ -64,18 +74,26 @@ const Dashboard = () => {
 
   const phoneForm = useForm<PhoneFormValues>({
     resolver: zodResolver(phoneSchema),
-    defaultValues: { phone: '' },
+    defaultValues: { phone: user?.phone || '' },
   });
 
   const onPasswordSubmit = async (data: PasswordFormValues) => {
     setIsPasswordLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      toast({
-        title: "Password updated",
-        description: "Your password has been changed successfully.",
-      });
-      passwordForm.reset();
+      const result = await updatePassword(data.currentPassword, data.newPassword);
+      if (result.success) {
+        toast({
+          title: t.dashboard.passwordChanged,
+          description: t.dashboard.passwordChanged,
+        });
+        passwordForm.reset();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update password",
+          variant: "destructive",
+        });
+      }
     } catch {
       toast({
         title: "Error",
@@ -90,11 +108,19 @@ const Dashboard = () => {
   const onPhoneSubmit = async (data: PhoneFormValues) => {
     setIsPhoneLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      toast({
-        title: "Phone updated",
-        description: "Your phone number has been changed successfully.",
-      });
+      const result = await updatePhone(data.phone);
+      if (result.success) {
+        toast({
+          title: t.dashboard.phoneChanged,
+          description: t.dashboard.phoneChanged,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update phone",
+          variant: "destructive",
+        });
+      }
     } catch {
       toast({
         title: "Error",
@@ -112,6 +138,10 @@ const Dashboard = () => {
     { label: t.dashboard.sold, value: 5, color: 'bg-muted' },
   ];
 
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
     <Layout>
       <div className="container-custom py-8">
@@ -121,14 +151,21 @@ const Dashboard = () => {
             <h1 className="font-display text-3xl font-bold text-foreground mb-2">
               {t.dashboard.title}
             </h1>
-            <p className="text-muted-foreground">Welcome back, User!</p>
+            <p className="text-muted-foreground">
+              {t.auth?.welcomeBack || 'Welcome back'}, {user?.firstName} {user?.lastName}!
+            </p>
           </div>
-          <Link to="/upload">
-            <Button variant="hero">
-              <Plus className="w-4 h-4 mr-2" />
-              {t.nav.upload}
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={logout}>
+              {t.nav.login === 'Login' ? 'Logout' : t.nav.login === 'Daxil Ol' ? 'Çıxış' : 'Выход'}
             </Button>
-          </Link>
+            <Link to="/upload">
+              <Button variant="hero">
+                <Plus className="w-4 h-4 mr-2" />
+                {t.nav.upload}
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
@@ -272,11 +309,11 @@ const Dashboard = () => {
               {/* Change Password */}
               <div className="bg-card border border-border rounded-xl p-6">
                 <h3 className="font-display text-xl font-semibold text-foreground mb-4">
-                  Change Password
+                  {t.dashboard.changePassword}
                 </h3>
                 <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="currentPassword">Current Password</Label>
+                    <Label htmlFor="currentPassword">{t.dashboard.currentPassword}</Label>
                     <div className="relative">
                       <Input
                         id="currentPassword"
@@ -302,7 +339,7 @@ const Dashboard = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="newPassword">New Password</Label>
+                    <Label htmlFor="newPassword">{t.dashboard.newPassword}</Label>
                     <div className="relative">
                       <Input
                         id="newPassword"
@@ -328,7 +365,7 @@ const Dashboard = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                    <Label htmlFor="confirmPassword">{t.dashboard.confirmPassword}</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -349,7 +386,7 @@ const Dashboard = () => {
                         Updating...
                       </>
                     ) : (
-                      "Update Password"
+                      t.dashboard.save
                     )}
                   </Button>
                 </form>
@@ -358,11 +395,11 @@ const Dashboard = () => {
               {/* Change Phone Number */}
               <div className="bg-card border border-border rounded-xl p-6">
                 <h3 className="font-display text-xl font-semibold text-foreground mb-4">
-                  Change Phone Number
+                  {t.dashboard.changePhone}
                 </h3>
                 <form onSubmit={phoneForm.handleSubmit(onPhoneSubmit)} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="phone">New Phone Number</Label>
+                    <Label htmlFor="phone">{t.dashboard.phoneNumber}</Label>
                     <Input
                       id="phone"
                       type="tel"
@@ -383,7 +420,7 @@ const Dashboard = () => {
                         Updating...
                       </>
                     ) : (
-                      "Update Phone Number"
+                      t.dashboard.save
                     )}
                   </Button>
                 </form>

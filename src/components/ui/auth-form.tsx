@@ -6,12 +6,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowLeft, Eye, EyeOff, Loader2, MailCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useTranslation } from "@/lib/i18n";
 
 // --------------------------------
 // Types and Enums
@@ -33,31 +37,6 @@ interface FormState {
   error: string | null;
   showPassword: boolean;
 }
-
-// --------------------------------
-// Schemas
-// --------------------------------
-
-const signInSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
-
-const signUpSchema = z.object({
-  firstName: z.string().min(2, "First name must be at least 2 characters"),
-  lastName: z.string().min(2, "Last name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  terms: z.literal(true, { errorMap: () => ({ message: "You must agree to the terms" }) }),
-});
-
-const forgotPasswordSchema = z.object({
-  email: z.string().email("Invalid email address"),
-});
-
-type SignInFormValues = z.infer<typeof signInSchema>;
-type SignUpFormValues = z.infer<typeof signUpSchema>;
-type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
 
 // --------------------------------
 // Main Auth Component
@@ -162,6 +141,7 @@ function AuthSocialButtons({ isLoading }: AuthSocialButtonsProps) {
         variant="outline"
         className="w-full h-12 bg-background/50 border-border/50"
         disabled={isLoading}
+        type="button"
       >
         <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
           <path
@@ -192,14 +172,18 @@ interface AuthSeparatorProps {
   text?: string;
 }
 
-function AuthSeparator({ text = "Or continue with" }: AuthSeparatorProps) {
+function AuthSeparator({ text }: AuthSeparatorProps) {
+  const { language } = useLanguage();
+  const t = useTranslation(language);
+  const displayText = text || t.auth.orContinueWith;
+  
   return (
     <div data-slot="auth-separator" className="relative mt-6">
       <div className="absolute inset-0 flex items-center">
         <Separator />
       </div>
       <div className="relative flex justify-center text-xs uppercase">
-        <span className="bg-card px-2 text-muted-foreground">{text}</span>
+        <span className="bg-card px-2 text-muted-foreground">{displayText}</span>
       </div>
     </div>
   );
@@ -215,6 +199,18 @@ interface AuthSignInProps {
 }
 
 function AuthSignIn({ onForgotPassword, onSignUp }: AuthSignInProps) {
+  const { language } = useLanguage();
+  const t = useTranslation(language);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  
+  const signInSchema = z.object({
+    email: z.string().email(t.auth.errors.invalidEmail),
+    password: z.string().min(8, t.auth.errors.passwordMin),
+  });
+  
+  type SignInFormValues = z.infer<typeof signInSchema>;
+  
   const [formState, setFormState] = React.useState<FormState>({
     isLoading: false,
     error: null,
@@ -229,10 +225,18 @@ function AuthSignIn({ onForgotPassword, onSignUp }: AuthSignInProps) {
   const onSubmit = async (data: SignInFormValues) => {
     setFormState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate API call
-      setFormState((prev) => ({ ...prev, error: "Invalid email or password" }));
+      const result = await login(data.email, data.password);
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        const errorKey = result.error as keyof typeof t.auth.errors;
+        setFormState((prev) => ({ 
+          ...prev, 
+          error: t.auth.errors[errorKey] || t.auth.errors.unexpectedError 
+        }));
+      }
     } catch {
-      setFormState((prev) => ({ ...prev, error: "An unexpected error occurred" }));
+      setFormState((prev) => ({ ...prev, error: t.auth.errors.unexpectedError }));
     } finally {
       setFormState((prev) => ({ ...prev, isLoading: false }));
     }
@@ -248,15 +252,15 @@ function AuthSignIn({ onForgotPassword, onSignUp }: AuthSignInProps) {
       className="p-8"
     >
       <div className="mb-8 text-center">
-        <h1 className="font-display text-3xl font-semibold text-foreground">Welcome back</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Sign in to your account</p>
+        <h1 className="font-display text-3xl font-semibold text-foreground">{t.auth.welcomeBack}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t.auth.signInToAccount}</p>
       </div>
 
       <AuthError message={formState.error} />
 
       <AuthForm onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t.auth.email}</Label>
           <Input
             id="email"
             type="email"
@@ -270,7 +274,7 @@ function AuthSignIn({ onForgotPassword, onSignUp }: AuthSignInProps) {
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t.auth.password}</Label>
             <Button
               type="button"
               variant="link"
@@ -278,7 +282,7 @@ function AuthSignIn({ onForgotPassword, onSignUp }: AuthSignInProps) {
               onClick={onForgotPassword}
               disabled={formState.isLoading}
             >
-              Forgot password?
+              {t.auth.forgotPassword}
             </Button>
           </div>
           <div className="relative">
@@ -310,10 +314,10 @@ function AuthSignIn({ onForgotPassword, onSignUp }: AuthSignInProps) {
           {formState.isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Signing in...
+              {t.auth.signingIn}
             </>
           ) : (
-            "Sign in"
+            t.auth.signIn
           )}
         </Button>
       </AuthForm>
@@ -322,14 +326,14 @@ function AuthSignIn({ onForgotPassword, onSignUp }: AuthSignInProps) {
       <AuthSocialButtons isLoading={formState.isLoading} />
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        No account?{" "}
+        {t.auth.noAccount}{" "}
         <Button
           variant="link"
           className="h-auto p-0 text-sm"
           onClick={onSignUp}
           disabled={formState.isLoading}
         >
-          Create one
+          {t.auth.createOne}
         </Button>
       </p>
     </motion.div>
@@ -345,6 +349,21 @@ interface AuthSignUpProps {
 }
 
 function AuthSignUp({ onSignIn }: AuthSignUpProps) {
+  const { language } = useLanguage();
+  const t = useTranslation(language);
+  const { register: registerUser } = useAuth();
+  const navigate = useNavigate();
+  
+  const signUpSchema = z.object({
+    firstName: z.string().min(2, t.auth.errors.firstNameMin),
+    lastName: z.string().min(2, t.auth.errors.lastNameMin),
+    email: z.string().email(t.auth.errors.invalidEmail),
+    password: z.string().min(8, t.auth.errors.passwordMin),
+    terms: z.literal(true, { errorMap: () => ({ message: t.auth.errors.agreeTerms }) }),
+  });
+  
+  type SignUpFormValues = z.infer<typeof signUpSchema>;
+  
   const [formState, setFormState] = React.useState<FormState>({
     isLoading: false,
     error: null,
@@ -361,10 +380,24 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
   const onSubmit = async (data: SignUpFormValues) => {
     setFormState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate API call
-      setFormState((prev) => ({ ...prev, error: "Email already registered" }));
+      const result = await registerUser({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+      });
+      
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        const errorKey = result.error as keyof typeof t.auth.errors;
+        setFormState((prev) => ({ 
+          ...prev, 
+          error: t.auth.errors[errorKey] || t.auth.errors.unexpectedError 
+        }));
+      }
     } catch {
-      setFormState((prev) => ({ ...prev, error: "An unexpected error occurred" }));
+      setFormState((prev) => ({ ...prev, error: t.auth.errors.unexpectedError }));
     } finally {
       setFormState((prev) => ({ ...prev, isLoading: false }));
     }
@@ -380,8 +413,8 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
       className="p-8"
     >
       <div className="mb-8 text-center">
-        <h1 className="font-display text-3xl font-semibold text-foreground">Create account</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Get started with your account</p>
+        <h1 className="font-display text-3xl font-semibold text-foreground">{t.auth.createAccount}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{t.auth.getStarted}</p>
       </div>
 
       <AuthError message={formState.error} />
@@ -389,7 +422,7 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
       <AuthForm onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="firstName">First Name</Label>
+            <Label htmlFor="firstName">{t.auth.firstName}</Label>
             <Input
               id="firstName"
               type="text"
@@ -401,7 +434,7 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
             {errors.firstName && <p className="text-xs text-destructive">{errors.firstName.message}</p>}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="lastName">Last Name</Label>
+            <Label htmlFor="lastName">{t.auth.lastName}</Label>
             <Input
               id="lastName"
               type="text"
@@ -415,7 +448,7 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t.auth.email}</Label>
           <Input
             id="email"
             type="email"
@@ -428,7 +461,7 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+          <Label htmlFor="password">{t.auth.password}</Label>
           <div className="relative">
             <Input
               id="password"
@@ -463,16 +496,16 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
           />
           <div className="space-y-1">
             <Label htmlFor="terms" className="text-sm leading-normal">
-              I agree to the terms
+              {t.auth.agreeToTerms}
             </Label>
             <p className="text-xs text-muted-foreground">
-              By signing up, you agree to our{" "}
+              {t.auth.bySigningUp}{" "}
               <Button variant="link" className="h-auto p-0 text-xs">
-                Terms
+                {t.auth.termsLink}
               </Button>{" "}
-              and{" "}
+              &{" "}
               <Button variant="link" className="h-auto p-0 text-xs">
-                Privacy Policy
+                {t.auth.privacyLink}
               </Button>
               .
             </p>
@@ -484,10 +517,10 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
           {formState.isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating account...
+              {t.auth.creatingAccount}
             </>
           ) : (
-            "Create account"
+            t.auth.createAccount
           )}
         </Button>
       </AuthForm>
@@ -496,14 +529,14 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
       <AuthSocialButtons isLoading={formState.isLoading} />
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        Have an account?{" "}
+        {t.auth.haveAccount}{" "}
         <Button
           variant="link"
           className="h-auto p-0 text-sm"
           onClick={onSignIn}
           disabled={formState.isLoading}
         >
-          Sign in
+          {t.auth.signIn}
         </Button>
       </p>
     </motion.div>
@@ -520,6 +553,15 @@ interface AuthForgotPasswordProps {
 }
 
 function AuthForgotPassword({ onSignIn, onSuccess }: AuthForgotPasswordProps) {
+  const { language } = useLanguage();
+  const t = useTranslation(language);
+  
+  const forgotPasswordSchema = z.object({
+    email: z.string().email(t.auth.errors.invalidEmail),
+  });
+  
+  type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+  
   const [formState, setFormState] = React.useState<FormState>({
     isLoading: false,
     error: null,
@@ -537,7 +579,7 @@ function AuthForgotPassword({ onSignIn, onSuccess }: AuthForgotPasswordProps) {
       await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulate API call
       onSuccess();
     } catch {
-      setFormState((prev) => ({ ...prev, error: "An unexpected error occurred" }));
+      setFormState((prev) => ({ ...prev, error: t.auth.errors.unexpectedError }));
     } finally {
       setFormState((prev) => ({ ...prev, isLoading: false }));
     }
@@ -564,9 +606,9 @@ function AuthForgotPassword({ onSignIn, onSuccess }: AuthForgotPasswordProps) {
       </Button>
 
       <div className="mb-8 text-center">
-        <h1 className="font-display text-3xl font-semibold text-foreground">Reset password</h1>
+        <h1 className="font-display text-3xl font-semibold text-foreground">{t.auth.resetPassword}</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Enter your email to receive a reset link
+          {t.auth.enterEmailForReset}
         </p>
       </div>
 
@@ -574,7 +616,7 @@ function AuthForgotPassword({ onSignIn, onSuccess }: AuthForgotPasswordProps) {
 
       <AuthForm onSubmit={handleSubmit(onSubmit)}>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t.auth.email}</Label>
           <Input
             id="email"
             type="email"
@@ -590,23 +632,23 @@ function AuthForgotPassword({ onSignIn, onSuccess }: AuthForgotPasswordProps) {
           {formState.isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending...
+              {t.auth.sending}
             </>
           ) : (
-            "Send reset link"
+            t.auth.sendResetLink
           )}
         </Button>
       </AuthForm>
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
-        Remember your password?{" "}
+        {t.auth.rememberPassword}{" "}
         <Button
           variant="link"
           className="h-auto p-0 text-sm"
           onClick={onSignIn}
           disabled={formState.isLoading}
         >
-          Sign in
+          {t.auth.signIn}
         </Button>
       </p>
     </motion.div>
@@ -622,6 +664,9 @@ interface AuthResetSuccessProps {
 }
 
 function AuthResetSuccess({ onSignIn }: AuthResetSuccessProps) {
+  const { language } = useLanguage();
+  const t = useTranslation(language);
+  
   return (
     <motion.div
       data-slot="auth-reset-success"
@@ -635,9 +680,9 @@ function AuthResetSuccess({ onSignIn }: AuthResetSuccessProps) {
         <MailCheck className="h-8 w-8 text-primary" />
       </div>
 
-      <h1 className="font-display text-2xl font-semibold text-foreground">Check your email</h1>
+      <h1 className="font-display text-2xl font-semibold text-foreground">{t.auth.checkEmail}</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        We sent a password reset link to your email.
+        {t.auth.resetLinkSent}
       </p>
 
       <Button
@@ -645,13 +690,13 @@ function AuthResetSuccess({ onSignIn }: AuthResetSuccessProps) {
         className="mt-6 w-full max-w-xs"
         onClick={onSignIn}
       >
-        Back to sign in
+        {t.auth.backToSignIn}
       </Button>
 
       <p className="mt-6 text-xs text-muted-foreground">
-        No email? Check spam or{" "}
+        {t.auth.noEmail}{" "}
         <Button variant="link" className="h-auto p-0 text-xs">
-          try another email
+          {t.auth.tryAnotherEmail}
         </Button>
       </p>
     </motion.div>
