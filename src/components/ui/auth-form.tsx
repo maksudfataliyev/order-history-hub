@@ -358,7 +358,10 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
     firstName: z.string().min(2, t.auth.errors.firstNameMin),
     lastName: z.string().min(2, t.auth.errors.lastNameMin),
     email: z.string().email(t.auth.errors.invalidEmail),
-    phone: z.string().min(10, t.auth.errors.phoneRequired),
+    phone: z.string()
+      .min(7, t.auth.errors.phoneMinLength)
+      .max(15, t.auth.errors.phoneMaxLength)
+      .regex(/^\+?[0-9]+$/, t.auth.errors.phoneOnlyNumbers),
     password: z.string().min(8, t.auth.errors.passwordMin),
     terms: z.literal(true, { errorMap: () => ({ message: t.auth.errors.agreeTerms }) }),
   });
@@ -467,10 +470,14 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
           <Input
             id="phone"
             type="tel"
-            placeholder="+994 XX XXX XX XX"
+            placeholder="+1234567890"
             disabled={formState.isLoading}
             className={cn(errors.phone && "border-destructive")}
-            {...register("phone")}
+            {...register("phone", {
+              onChange: (e) => {
+                e.target.value = e.target.value.replace(/[^0-9+]/g, '');
+              }
+            })}
           />
           {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
         </div>
