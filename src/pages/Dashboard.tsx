@@ -62,7 +62,10 @@ const Dashboard = () => {
   });
 
   const phoneSchema = z.object({
-    phone: z.string().min(10, 'Please enter a valid phone number'),
+    phone: z.string()
+      .min(7, t.auth?.errors?.phoneMinLength || 'Phone must be at least 7 digits')
+      .max(15, t.auth?.errors?.phoneMaxLength || 'Phone cannot exceed 15 digits')
+      .regex(/^\+?[0-9]+$/, t.auth?.errors?.phoneOnlyNumbers || 'Only numbers allowed'),
   });
 
   const profileSchema = z.object({
