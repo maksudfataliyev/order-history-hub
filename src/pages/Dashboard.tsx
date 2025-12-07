@@ -35,13 +35,14 @@ const mockOffers = [
 
 const Dashboard = () => {
   const { t } = useLanguage();
-  const { user, isAuthenticated, updatePassword, updatePhone, logout } = useAuth();
+  const { user, isAuthenticated, updatePassword, updatePhone, updateProfile, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('listings');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
   const [isPhoneLoading, setIsPhoneLoading] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -64,8 +65,14 @@ const Dashboard = () => {
     phone: z.string().min(10, 'Please enter a valid phone number'),
   });
 
+  const profileSchema = z.object({
+    firstName: z.string().min(2, t.auth?.errors?.firstNameMin || 'First name must be at least 2 characters'),
+    lastName: z.string().min(2, t.auth?.errors?.lastNameMin || 'Last name must be at least 2 characters'),
+  });
+
   type PasswordFormValues = z.infer<typeof passwordSchema>;
   type PhoneFormValues = z.infer<typeof phoneSchema>;
+  type ProfileFormValues = z.infer<typeof profileSchema>;
 
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
@@ -75,6 +82,11 @@ const Dashboard = () => {
   const phoneForm = useForm<PhoneFormValues>({
     resolver: zodResolver(phoneSchema),
     defaultValues: { phone: user?.phone || '' },
+  });
+
+  const profileForm = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { firstName: user?.firstName || '', lastName: user?.lastName || '' },
   });
 
   const onPasswordSubmit = async (data: PasswordFormValues) => {
@@ -129,6 +141,33 @@ const Dashboard = () => {
       });
     } finally {
       setIsPhoneLoading(false);
+    }
+  };
+
+  const onProfileSubmit = async (data: ProfileFormValues) => {
+    setIsProfileLoading(true);
+    try {
+      const result = await updateProfile({ firstName: data.firstName, lastName: data.lastName });
+      if (result.success) {
+        toast({
+          title: t.dashboard.profileChanged,
+          description: t.dashboard.profileChanged,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update profile",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProfileLoading(false);
     }
   };
 
@@ -415,6 +454,55 @@ const Dashboard = () => {
 
                   <Button type="submit" className="w-full" disabled={isPhoneLoading}>
                     {isPhoneLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      t.dashboard.save
+                    )}
+                  </Button>
+                </form>
+              </div>
+
+              {/* Change Name */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="font-display text-xl font-semibold text-foreground mb-4">
+                  {t.dashboard.changeName}
+                </h3>
+                <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">{t.auth?.firstName || 'First Name'}</Label>
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="John"
+                      disabled={isProfileLoading}
+                      className={cn(profileForm.formState.errors.firstName && "border-destructive")}
+                      {...profileForm.register("firstName")}
+                    />
+                    {profileForm.formState.errors.firstName && (
+                      <p className="text-xs text-destructive">{profileForm.formState.errors.firstName.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">{t.auth?.lastName || 'Last Name'}</Label>
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Doe"
+                      disabled={isProfileLoading}
+                      className={cn(profileForm.formState.errors.lastName && "border-destructive")}
+                      {...profileForm.register("lastName")}
+                    />
+                    {profileForm.formState.errors.lastName && (
+                      <p className="text-xs text-destructive">{profileForm.formState.errors.lastName.message}</p>
+                    )}
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={isProfileLoading}>
+                    {isProfileLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         Updating...

@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Scale, RefreshCw, ShoppingCart, Check, User } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mockProducts } from '@/data/products';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompare } from '@/contexts/CompareContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 const getConditionLabel = (condition: string, t: ReturnType<typeof useLanguage>['t']) => {
@@ -27,7 +28,8 @@ const ProductDetail = () => {
   const { id } = useParams();
   const { t } = useLanguage();
   const { addToCompare, isInCompare } = useCompare();
-  
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const product = mockProducts.find(p => p.id === id);
   const inCompare = product ? isInCompare(product.id) : false;
 
@@ -58,6 +60,14 @@ const ProductDetail = () => {
   };
 
   const handleMakeOffer = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: 'Login Required',
+        description: 'Please login to make an offer',
+      });
+      navigate('/auth');
+      return;
+    }
     toast({
       title: 'Offer Feature',
       description: 'Barter offer system coming soon!',
@@ -65,6 +75,14 @@ const ProductDetail = () => {
   };
 
   const handleBuyNow = () => {
+    if (!isAuthenticated) {
+      toast({
+        title: 'Login Required',
+        description: 'Please login to make a purchase',
+      });
+      navigate('/auth');
+      return;
+    }
     toast({
       title: 'Checkout',
       description: 'Payment system coming soon!',
