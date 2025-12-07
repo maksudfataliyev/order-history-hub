@@ -358,6 +358,7 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
     firstName: z.string().min(2, t.auth.errors.firstNameMin),
     lastName: z.string().min(2, t.auth.errors.lastNameMin),
     email: z.string().email(t.auth.errors.invalidEmail),
+    phone: z.string().min(10, t.auth.errors.phoneRequired),
     password: z.string().min(8, t.auth.errors.passwordMin),
     terms: z.literal(true, { errorMap: () => ({ message: t.auth.errors.agreeTerms }) }),
   });
@@ -372,7 +373,7 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { firstName: "", lastName: "", email: "", password: "", terms: undefined as unknown as true },
+    defaultValues: { firstName: "", lastName: "", email: "", phone: "", password: "", terms: undefined as unknown as true },
   });
 
   const terms = watch("terms");
@@ -385,6 +386,7 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
         lastName: data.lastName,
         email: data.email,
         password: data.password,
+        phone: data.phone,
       });
       
       if (result.success) {
@@ -458,6 +460,19 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
             {...register("email")}
           />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">{t.auth.phone}</Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="+994 XX XXX XX XX"
+            disabled={formState.isLoading}
+            className={cn(errors.phone && "border-destructive")}
+            {...register("phone")}
+          />
+          {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
         </div>
 
         <div className="space-y-2">

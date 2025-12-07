@@ -6,7 +6,7 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
-  phone?: string;
+  phone: string;
 }
 
 interface StoredUser extends User {
@@ -17,10 +17,11 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (data: { firstName: string; lastName: string; email: string; password: string }) => Promise<{ success: boolean; error?: string }>;
+  register: (data: { firstName: string; lastName: string; email: string; password: string; phone: string }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   updatePhone: (phone: string) => Promise<{ success: boolean; error?: string }>;
+  updateProfile: (data: { firstName: string; lastName: string }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { success: true };
   };
 
-  const register = async (data: { firstName: string; lastName: string; email: string; password: string }): Promise<{ success: boolean; error?: string }> => {
+  const register = async (data: { firstName: string; lastName: string; email: string; password: string; phone: string }): Promise<{ success: boolean; error?: string }> => {
     const users = getUsers();
     
     if (users.some(u => u.email.toLowerCase() === data.email.toLowerCase())) {
@@ -84,6 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       lastName: data.lastName,
       email: data.email,
       password: data.password,
+      phone: data.phone,
     };
     
     saveUsers([...users, newUser]);
@@ -136,8 +138,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { success: true };
   };
 
+  const updateProfile = async (data: { firstName: string; lastName: string }): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'notLoggedIn' };
+    
+    const users = getUsers();
+    const userIndex = users.findIndex(u => u.id === user.id);
+    
+    if (userIndex === -1) return { success: false, error: 'userNotFound' };
+    
+    users[userIndex].firstName = data.firstName;
+    users[userIndex].lastName = data.lastName;
+    saveUsers(users);
+    
+    const updatedUser = { ...user, firstName: data.firstName, lastName: data.lastName };
+    setUser(updatedUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    
+    return { success: true };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updatePassword, updatePhone }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updatePassword, updatePhone, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
