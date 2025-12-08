@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2, Camera, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { mockProducts } from '@/data/products';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const myListings = mockProducts.slice(0, 3).map((p, i) => ({
   ...p,
@@ -35,7 +36,7 @@ const mockOffers = [
 
 const Dashboard = () => {
   const { t } = useLanguage();
-  const { user, isAuthenticated, updatePassword, updatePhone, updateProfile, logout } = useAuth();
+  const { user, isAuthenticated, updatePassword, updatePhone, updateProfile, updateAvatar, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('listings');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -43,6 +44,35 @@ const Dashboard = () => {
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
   const [isPhoneLoading, setIsPhoneLoading] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [isAvatarLoading, setIsAvatarLoading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsAvatarLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        const result = await updateAvatar(base64);
+        if (result.success) {
+          toast({ title: t.dashboard.avatarChanged });
+        }
+        setIsAvatarLoading(false);
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setIsAvatarLoading(false);
+      toast({ title: "Error", variant: "destructive" });
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleDateString();
+  };
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -189,17 +219,46 @@ const Dashboard = () => {
       <div className="container-custom py-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-              {t.dashboard.title}
-            </h1>
-            <p className="text-muted-foreground">
-              {t.auth?.welcomeBack || 'Welcome back'}, {user?.firstName} {user?.lastName}!
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <Avatar className="h-16 w-16 border-2 border-border">
+                <AvatarImage src={user?.avatarUrl} alt={user?.firstName} />
+                <AvatarFallback className="bg-muted text-muted-foreground text-xl">
+                  {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+              <button
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={isAvatarLoading}
+                className="absolute bottom-0 right-0 p-1 bg-primary text-primary-foreground rounded-full hover:bg-primary/90 transition-colors"
+              >
+                {isAvatarLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Camera className="w-3 h-3" />}
+              </button>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
+            </div>
+            <div>
+              <h1 className="font-display text-3xl font-bold text-foreground mb-1">
+                {t.dashboard.title}
+              </h1>
+              <p className="text-muted-foreground">
+                {t.auth?.welcomeBack || 'Welcome back'}, {user?.firstName} {user?.lastName}!
+              </p>
+              {user?.createdAt && (
+                <p className="text-sm text-muted-foreground">
+                  {t.dashboard.memberSince}: {formatDate(user.createdAt)}
+                </p>
+              )}
+            </div>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={logout}>
-              {t.nav.login === 'Login' ? 'Logout' : t.nav.login === 'Daxil Ol' ? 'Çıxış' : 'Выход'}
+              {t.nav.logout}
             </Button>
             <Link to="/upload">
               <Button variant="hero">

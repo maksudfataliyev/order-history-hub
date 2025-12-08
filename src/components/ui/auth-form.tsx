@@ -354,16 +354,21 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
   const { register: registerUser } = useAuth();
   const navigate = useNavigate();
   
+  // Azerbaijan phone regex: +994 XX XXX XX XX
+  const azPhoneRegex = /^\+994\s?\d{2}\s?\d{3}\s?\d{2}\s?\d{2}$/;
+  
   const signUpSchema = z.object({
     firstName: z.string().min(2, t.auth.errors.firstNameMin),
     lastName: z.string().min(2, t.auth.errors.lastNameMin),
     email: z.string().email(t.auth.errors.invalidEmail),
     phone: z.string()
-      .min(7, t.auth.errors.phoneMinLength)
-      .max(15, t.auth.errors.phoneMaxLength)
-      .regex(/^\+?[0-9]+$/, t.auth.errors.phoneOnlyNumbers),
+      .regex(azPhoneRegex, t.auth.errors.phoneInvalidFormat),
     password: z.string().min(8, t.auth.errors.passwordMin),
+    confirmPassword: z.string().min(8, t.auth.errors.passwordMin),
     terms: z.literal(true, { errorMap: () => ({ message: t.auth.errors.agreeTerms }) }),
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t.auth.errors.passwordsDoNotMatch,
+    path: ["confirmPassword"],
   });
   
   type SignUpFormValues = z.infer<typeof signUpSchema>;
@@ -373,13 +378,41 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
     error: null,
     showPassword: false,
   });
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { firstName: "", lastName: "", email: "", phone: "", password: "", terms: undefined as unknown as true },
+    defaultValues: { firstName: "", lastName: "", email: "", phone: "+994 ", password: "", confirmPassword: "", terms: undefined as unknown as true },
   });
 
   const terms = watch("terms");
+
+  // Format phone number as user types
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digits except +
+    let cleaned = value.replace(/[^\d+]/g, '');
+    
+    // Ensure it starts with +994
+    if (!cleaned.startsWith('+994')) {
+      if (cleaned.startsWith('994')) {
+        cleaned = '+' + cleaned;
+      } else if (cleaned.startsWith('+')) {
+        cleaned = '+994' + cleaned.substring(1).replace(/\D/g, '');
+      } else {
+        cleaned = '+994' + cleaned.replace(/\D/g, '');
+      }
+    }
+    
+    // Format as +994 XX XXX XX XX
+    const digits = cleaned.substring(4);
+    let formatted = '+994';
+    if (digits.length > 0) formatted += ' ' + digits.substring(0, 2);
+    if (digits.length > 2) formatted += ' ' + digits.substring(2, 5);
+    if (digits.length > 5) formatted += ' ' + digits.substring(5, 7);
+    if (digits.length > 7) formatted += ' ' + digits.substring(7, 9);
+    
+    return formatted;
+  };
 
   const onSubmit = async (data: SignUpFormValues) => {
     setFormState((prev) => ({ ...prev, isLoading: true, error: null }));
@@ -470,12 +503,12 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
           <Input
             id="phone"
             type="tel"
-            placeholder="+1234567890"
+            placeholder="+994 XX XXX XX XX"
             disabled={formState.isLoading}
             className={cn(errors.phone && "border-destructive")}
             {...register("phone", {
               onChange: (e) => {
-                e.target.value = e.target.value.replace(/[^0-9+]/g, '');
+                e.target.value = formatPhoneNumber(e.target.value);
               }
             })}
           />
@@ -507,6 +540,31 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
             </Button>
           </div>
           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">{t.auth.confirmPasswordLabel}</Label>
+          <div className="relative">
+            <Input
+              id="confirmPassword"
+              type={showConfirmPassword ? "text" : "password"}
+              placeholder="••••••••"
+              disabled={formState.isLoading}
+              className={cn(errors.confirmPassword && "border-destructive")}
+              {...register("confirmPassword")}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-0 h-full"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              disabled={formState.isLoading}
+            >
+              {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+          {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>}
         </div>
 
         <div className="flex items-start space-x-2">
