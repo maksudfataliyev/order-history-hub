@@ -7,6 +7,8 @@ export interface User {
   lastName: string;
   email: string;
   phone: string;
+  avatarUrl?: string;
+  createdAt: string;
 }
 
 interface StoredUser extends User {
@@ -22,6 +24,7 @@ interface AuthContextType {
   updatePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
   updatePhone: (phone: string) => Promise<{ success: boolean; error?: string }>;
   updateProfile: (data: { firstName: string; lastName: string }) => Promise<{ success: boolean; error?: string }>;
+  updateAvatar: (avatarUrl: string | null) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,6 +89,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: data.email,
       password: data.password,
       phone: data.phone,
+      createdAt: new Date().toISOString(),
     };
     
     saveUsers([...users, newUser]);
@@ -157,8 +161,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { success: true };
   };
 
+  const updateAvatar = async (avatarUrl: string | null): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'notLoggedIn' };
+    
+    const users = getUsers();
+    const userIndex = users.findIndex(u => u.id === user.id);
+    
+    if (userIndex === -1) return { success: false, error: 'userNotFound' };
+    
+    users[userIndex].avatarUrl = avatarUrl || undefined;
+    saveUsers(users);
+    
+    const updatedUser = { ...user, avatarUrl: avatarUrl || undefined };
+    setUser(updatedUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    
+    return { success: true };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updatePassword, updatePhone, updateProfile }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updatePassword, updatePhone, updateProfile, updateAvatar }}>
       {children}
     </AuthContext.Provider>
   );
