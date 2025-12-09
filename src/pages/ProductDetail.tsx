@@ -83,10 +83,7 @@ const ProductDetail = () => {
       navigate('/auth');
       return;
     }
-    toast({
-      title: 'Checkout',
-      description: 'Payment system coming soon!',
-    });
+    navigate('/checkout', { state: { productId: product.id } });
   };
 
   return (

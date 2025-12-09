@@ -13,6 +13,8 @@ import Upload from "./pages/Upload";
 import Dashboard from "./pages/Dashboard";
 import Compare from "./pages/Compare";
 import AuthPage from "./pages/Auth";
+import Shipping from "./pages/Shipping";
+import Checkout from "./pages/Checkout";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +36,8 @@ const App = () => (
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/compare" element={<Compare />} />
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/shipping" element={<Shipping />} />
+                <Route path="/checkout" element={<Checkout />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
