@@ -40,24 +40,44 @@ const getConditionLabel = (cond: string, t: ReturnType<typeof useLanguage>['t'])
 const Catalog = () => {
   const { t } = useLanguage();
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedCondition, setSelectedCondition] = useState('all');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+
+  const toggleCategory = (cat: string) => {
+    if (cat === 'all') {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(prev => 
+        prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+      );
+    }
+  };
+
+  const toggleCondition = (cond: string) => {
+    if (cond === 'all') {
+      setSelectedConditions([]);
+    } else {
+      setSelectedConditions(prev => 
+        prev.includes(cond) ? prev.filter(c => c !== cond) : [...prev, cond]
+      );
+    }
+  };
 
   const filteredProducts = useMemo(() => {
     return mockProducts.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      const matchesCondition = selectedCondition === 'all' || product.condition === selectedCondition;
+      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(product.category);
+      const matchesCondition = selectedConditions.length === 0 || selectedConditions.includes(product.condition);
       return matchesSearch && matchesCategory && matchesCondition;
     });
-  }, [search, selectedCategory, selectedCondition]);
+  }, [search, selectedCategories, selectedConditions]);
 
   // Reset to page 1 when filters change
   useMemo(() => {
     setCurrentPage(1);
-  }, [search, selectedCategory, selectedCondition]);
+  }, [search, selectedCategories, selectedConditions]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   
@@ -74,12 +94,12 @@ const Catalog = () => {
 
   const clearFilters = () => {
     setSearch('');
-    setSelectedCategory('all');
-    setSelectedCondition('all');
+    setSelectedCategories([]);
+    setSelectedConditions([]);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = search || selectedCategory !== 'all' || selectedCondition !== 'all';
+  const hasActiveFilters = search || selectedCategories.length > 0 || selectedConditions.length > 0;
 
   return (
     <Layout>
@@ -129,15 +149,25 @@ const Catalog = () => {
               <div>
                 <h3 className="font-semibold text-foreground mb-3">{t.catalog.category}</h3>
                 <div className="flex flex-wrap gap-2">
-                  {categories.map((cat) => (
+                  <Badge
+                    variant={selectedCategories.length === 0 ? 'default' : 'outline'}
+                    className={cn(
+                      'cursor-pointer transition-colors',
+                      selectedCategories.length === 0 && 'bg-primary text-primary-foreground'
+                    )}
+                    onClick={() => setSelectedCategories([])}
+                  >
+                    {t.catalog.all}
+                  </Badge>
+                  {categories.filter(c => c !== 'all').map((cat) => (
                     <Badge
                       key={cat}
-                      variant={selectedCategory === cat ? 'default' : 'outline'}
+                      variant={selectedCategories.includes(cat) ? 'default' : 'outline'}
                       className={cn(
                         'cursor-pointer transition-colors',
-                        selectedCategory === cat && 'bg-primary text-primary-foreground'
+                        selectedCategories.includes(cat) && 'bg-primary text-primary-foreground'
                       )}
-                      onClick={() => setSelectedCategory(cat)}
+                      onClick={() => toggleCategory(cat)}
                     >
                       {getCategoryLabel(cat, t)}
                     </Badge>
@@ -149,15 +179,25 @@ const Catalog = () => {
               <div>
                 <h3 className="font-semibold text-foreground mb-3">{t.catalog.condition}</h3>
                 <div className="flex flex-wrap gap-2">
-                  {conditions.map((cond) => (
+                  <Badge
+                    variant={selectedConditions.length === 0 ? 'default' : 'outline'}
+                    className={cn(
+                      'cursor-pointer transition-colors',
+                      selectedConditions.length === 0 && 'bg-primary text-primary-foreground'
+                    )}
+                    onClick={() => setSelectedConditions([])}
+                  >
+                    {t.catalog.all}
+                  </Badge>
+                  {conditions.filter(c => c !== 'all').map((cond) => (
                     <Badge
                       key={cond}
-                      variant={selectedCondition === cond ? 'default' : 'outline'}
+                      variant={selectedConditions.includes(cond) ? 'default' : 'outline'}
                       className={cn(
                         'cursor-pointer transition-colors',
-                        selectedCondition === cond && 'bg-primary text-primary-foreground'
+                        selectedConditions.includes(cond) && 'bg-primary text-primary-foreground'
                       )}
-                      onClick={() => setSelectedCondition(cond)}
+                      onClick={() => toggleCondition(cond)}
                     >
                       {getConditionLabel(cond, t)}
                     </Badge>

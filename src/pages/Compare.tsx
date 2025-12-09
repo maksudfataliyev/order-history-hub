@@ -75,9 +75,6 @@ const Compare = () => {
     { key: 'condition', label: t.product.condition, render: (p: typeof compareList[0]) => (
       <Badge className={getConditionColor(p.condition)}>{getConditionLabel(p.condition, t)}</Badge>
     )},
-    { key: 'category', label: t.catalog.category, render: (p: typeof compareList[0]) => (
-      <span className="text-foreground">{getCategoryLabel(p.category, t)}</span>
-    )},
     { key: 'dimensions', label: t.product.dimensions, render: (p: typeof compareList[0]) => (
       <span className="text-foreground font-mono text-sm">{p.dimensions.width}×{p.dimensions.height}×{p.dimensions.depth} cm</span>
     )},
@@ -130,11 +127,7 @@ const Compare = () => {
               className="grid gap-4 mb-6" 
               style={{ gridTemplateColumns: `160px repeat(${compareList.length}, 1fr)` }}
             >
-              <div className="flex items-end pb-4">
-                <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  {t.catalog.category}
-                </span>
-              </div>
+              <div className="flex items-end pb-4" />
               {compareList.map((product, index) => (
                 <motion.div 
                   key={product.id} 
@@ -150,14 +143,14 @@ const Compare = () => {
                     <X className="w-4 h-4" />
                   </button>
                   <Link to={`/product/${product.id}`} className="block">
-                    <div className="aspect-square overflow-hidden bg-muted">
+                    <div className="aspect-square overflow-hidden bg-muted flex items-center justify-center">
                       <img
                         src={product.image}
                         alt={product.name}
                         className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       />
                     </div>
-                    <div className="p-4">
+                    <div className="p-4 text-center">
                       <h3 className="font-display font-semibold text-foreground line-clamp-2 text-sm sm:text-base">
                         {product.name}
                       </h3>

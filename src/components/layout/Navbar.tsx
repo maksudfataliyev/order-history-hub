@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Scale, User, Plus, Home, Grid3X3, LogIn, LogOut } from 'lucide-react';
+import { Menu, X, Scale, User, Plus, Home, Grid3X3, LogIn, LogOut, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompare } from '@/contexts/CompareContext';
@@ -24,6 +24,7 @@ export const Navbar = () => {
   const navLinks = [
     { to: '/', label: t.nav.home, icon: Home },
     { to: '/catalog', label: t.nav.catalog, icon: Grid3X3 },
+    { to: '/shipping', label: t.shipping.title, icon: Truck },
     { to: '/upload', label: t.nav.upload, icon: Plus },
     { to: '/dashboard', label: t.nav.dashboard, icon: User },
   ];
