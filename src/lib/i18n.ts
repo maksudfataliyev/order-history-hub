@@ -54,6 +54,10 @@ export const translations = {
       lowToHigh: 'Aşağıdan Yuxarı',
       highToLow: 'Yuxarıdan Aşağı',
       newest: 'Ən Yeni',
+      itemsFound: 'məhsul tapıldı',
+      clear: 'Təmizlə',
+      noProducts: 'Məhsul tapılmadı',
+      clearFilters: 'Filtrləri Təmizlə',
       categories: {
         sofa: 'Divan',
         chair: 'Kreslo',
@@ -244,6 +248,10 @@ export const translations = {
       lowToHigh: 'По Возрастанию',
       highToLow: 'По Убыванию',
       newest: 'Новейшие',
+      itemsFound: 'товаров найдено',
+      clear: 'Очистить',
+      noProducts: 'Товары не найдены',
+      clearFilters: 'Очистить Фильтры',
       categories: {
         sofa: 'Диван',
         chair: 'Кресло',
@@ -434,6 +442,10 @@ export const translations = {
       lowToHigh: 'Low to High',
       highToLow: 'High to Low',
       newest: 'Newest',
+      itemsFound: 'items found',
+      clear: 'Clear',
+      noProducts: 'No products found',
+      clearFilters: 'Clear Filters',
       categories: {
         sofa: 'Sofa',
         chair: 'Chair',

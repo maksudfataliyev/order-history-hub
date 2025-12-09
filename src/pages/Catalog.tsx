@@ -5,12 +5,21 @@ import { ProductCard } from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+} from '@/components/ui/pagination';
+import { usePagination } from '@/hooks/use-pagination';
 import { mockProducts } from '@/data/products';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
 const categories = ['all', 'sofa', 'chair', 'table', 'bed', 'storage', 'desk'];
 const conditions = ['all', 'new', 'likeNew', 'good', 'fair'];
+const ITEMS_PER_PAGE = 12;
 
 const getCategoryLabel = (cat: string, t: ReturnType<typeof useLanguage>['t']) => {
   if (cat === 'all') return t.catalog.all;
@@ -34,6 +43,7 @@ const Catalog = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedCondition, setSelectedCondition] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredProducts = useMemo(() => {
     return mockProducts.filter((product) => {
@@ -44,10 +54,29 @@ const Catalog = () => {
     });
   }, [search, selectedCategory, selectedCondition]);
 
+  // Reset to page 1 when filters change
+  useMemo(() => {
+    setCurrentPage(1);
+  }, [search, selectedCategory, selectedCondition]);
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredProducts, currentPage]);
+
+  const { pages, showLeftEllipsis, showRightEllipsis } = usePagination({
+    currentPage,
+    totalPages,
+    paginationItemsToDisplay: 5,
+  });
+
   const clearFilters = () => {
     setSearch('');
     setSelectedCategory('all');
     setSelectedCondition('all');
+    setCurrentPage(1);
   };
 
   const hasActiveFilters = search || selectedCategory !== 'all' || selectedCondition !== 'all';
@@ -61,7 +90,7 @@ const Catalog = () => {
             {t.catalog.title}
           </h1>
           <p className="text-muted-foreground">
-            {filteredProducts.length} items found
+            {filteredProducts.length} {t.catalog.itemsFound || 'items found'}
           </p>
         </div>
 
@@ -87,7 +116,7 @@ const Catalog = () => {
           {hasActiveFilters && (
             <Button variant="ghost" onClick={clearFilters} className="gap-2">
               <X className="w-4 h-4" />
-              Clear
+              {t.catalog.clear || 'Clear'}
             </Button>
           )}
         </div>
@@ -140,23 +169,93 @@ const Catalog = () => {
         )}
 
         {/* Products Grid */}
-        {filteredProducts.length > 0 ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredProducts.map((product, index) => (
-              <div
-                key={product.id}
-                className="animate-slide-up"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <ProductCard product={product} />
+        {paginatedProducts.length > 0 ? (
+          <>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {paginatedProducts.map((product, index) => (
+                <div
+                  key={product.id}
+                  className="animate-slide-up"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-12">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                        disabled={currentPage === 1}
+                        className="h-9 w-9"
+                      >
+                        ←
+                      </Button>
+                    </PaginationItem>
+
+                    {showLeftEllipsis && (
+                      <>
+                        <PaginationItem>
+                          <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
+                        </PaginationItem>
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      </>
+                    )}
+
+                    {pages.map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+
+                    {showRightEllipsis && (
+                      <>
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                        <PaginationItem>
+                          <PaginationLink onClick={() => setCurrentPage(totalPages)}>
+                            {totalPages}
+                          </PaginationLink>
+                        </PaginationItem>
+                      </>
+                    )}
+
+                    <PaginationItem>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                        disabled={currentPage === totalPages}
+                        className="h-9 w-9"
+                      >
+                        →
+                      </Button>
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-16">
-            <p className="text-muted-foreground text-lg">No products found</p>
+            <p className="text-muted-foreground text-lg">{t.catalog.noProducts || 'No products found'}</p>
             <Button variant="outline" onClick={clearFilters} className="mt-4">
-              Clear Filters
+              {t.catalog.clearFilters || 'Clear Filters'}
             </Button>
           </div>
         )}
