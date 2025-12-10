@@ -41,6 +41,7 @@ const Dashboard = () => {
   const { getOrdersByUser } = useOrders();
   const navigate = useNavigate();
   const userOrders = getOrdersByUser();
+  const [activeTab, setActiveTab] = useState('listings');
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
@@ -48,6 +49,26 @@ const Dashboard = () => {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isAvatarLoading, setIsAvatarLoading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  const getStatusLabel = (status: string) => {
+    const statusMap: Record<string, string> = {
+      placed: (t.dashboard.orderStatus as Record<string, string>)?.placed || 'Placed',
+      confirmed: (t.dashboard.orderStatus as Record<string, string>)?.confirmed || 'Confirmed',
+      shipped: (t.dashboard.orderStatus as Record<string, string>)?.shipped || 'Shipped',
+      outForDelivery: (t.dashboard.orderStatus as Record<string, string>)?.outForDelivery || 'Out for Delivery',
+      delivered: (t.dashboard.orderStatus as Record<string, string>)?.delivered || 'Delivered',
+    };
+    return statusMap[status] || status;
+  };
+
+  const getListingStatusLabel = (status: string) => {
+    const statusLabels: Record<string, string> = {
+      active: t.dashboard.active as string,
+      pending: t.dashboard.pending as string,
+      sold: t.dashboard.sold as string,
+    };
+    return statusLabels[status] || status;
+  };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -298,6 +319,13 @@ const Dashboard = () => {
               <span className="hidden sm:inline">{t.dashboard.offers}</span>
               <Badge className="ml-1 bg-sage text-sage-dark">2</Badge>
             </TabsTrigger>
+            <TabsTrigger value="orders" className="gap-2">
+              <ShoppingBag className="w-4 h-4" />
+              <span className="hidden sm:inline">{t.dashboard.orders}</span>
+              {userOrders.length > 0 && (
+                <Badge className="ml-1 bg-primary text-primary-foreground">{userOrders.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="w-4 h-4" />
               <span className="hidden sm:inline">{t.dashboard.settings}</span>
@@ -328,7 +356,7 @@ const Dashboard = () => {
                       listing.status === 'sold' && 'bg-muted text-muted-foreground'
                     )}
                   >
-                    {t.dashboard[listing.status as keyof typeof t.dashboard]}
+                    {getListingStatusLabel(listing.status)}
                   </Badge>
                   <Link to={`/product/${listing.id}`}>
                     <Button variant="ghost" size="sm">View</Button>
@@ -404,6 +432,65 @@ const Dashboard = () => {
                 </div>
               ))}
             </div>
+          </TabsContent>
+
+          {/* Orders Tab */}
+          <TabsContent value="orders" className="mt-6">
+            {userOrders.length === 0 ? (
+              <div className="text-center py-12 bg-card border border-border rounded-xl">
+                <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">{t.dashboard.noOrders}</p>
+                <Link to="/catalog">
+                  <Button variant="outline" className="mt-4">
+                    {t.compare?.browseCatalog || 'Browse Catalog'}
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {userOrders.map((order) => (
+                  <div
+                    key={order.id}
+                    className="p-4 bg-card border border-border rounded-xl"
+                  >
+                    <div className="flex items-center gap-4 mb-3">
+                      <img
+                        src={order.productImage}
+                        alt={order.productName}
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground truncate">{order.productName}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {t.checkout?.orderNumber || 'Order'}: #{order.id.slice(0, 8).toUpperCase()}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-display font-bold text-primary">₼{order.total}</p>
+                        <Badge
+                          className={cn(
+                            order.status === 'placed' && 'bg-primary/20 text-primary',
+                            order.status === 'confirmed' && 'bg-blue-100 text-blue-700',
+                            order.status === 'shipped' && 'bg-yellow-100 text-yellow-700',
+                            order.status === 'outForDelivery' && 'bg-orange-100 text-orange-700',
+                            order.status === 'delivered' && 'bg-sage text-sage-dark'
+                          )}
+                        >
+                          {getStatusLabel(order.status)}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="border-t border-border pt-3 text-sm text-muted-foreground">
+                      <p>{order.address.street}, {order.address.city}</p>
+                      <p>{order.address.phone}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           {/* Settings Tab */}
