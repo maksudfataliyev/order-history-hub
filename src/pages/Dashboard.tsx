@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2, Camera, User } from 'lucide-react';
+import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2, Camera, ShoppingBag } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useOrders } from '@/contexts/OrderContext';
 import { mockProducts } from '@/data/products';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -37,8 +38,9 @@ const mockOffers = [
 const Dashboard = () => {
   const { t } = useLanguage();
   const { user, isAuthenticated, updatePassword, updatePhone, updateProfile, updateAvatar, logout } = useAuth();
+  const { getOrdersByUser } = useOrders();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('listings');
+  const userOrders = getOrdersByUser();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
