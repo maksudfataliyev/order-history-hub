@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompare } from '@/contexts/CompareContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { CartSheet } from '@/components/CartSheet';
 import { Language } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 
@@ -79,6 +80,9 @@ export const Navbar = () => {
                 </Button>
               </Link>
             )}
+
+            {/* Cart */}
+            <CartSheet />
 
             {/* Compare Button */}
             <Link to="/compare">
