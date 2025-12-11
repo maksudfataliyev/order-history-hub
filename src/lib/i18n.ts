@@ -124,6 +124,8 @@ export const translations = {
       updating: 'Yenilənir...',
       view: 'Bax',
       noOrders: 'Hələ sifarişiniz yoxdur',
+      orderPlaced: 'Sifariş yerləşdirildi',
+      clickToView: 'Ətraflı baxmaq üçün klikləyin',
       orderStatus: {
         placed: 'Yerləşdirildi',
         confirmed: 'Təsdiqləndi',
@@ -224,6 +226,13 @@ export const translations = {
         streetMin: 'Küçə ünvanı ən azı 5 simvol olmalıdır',
         streetMax: 'Küçə ünvanı 200 simvoldan çox ola bilməz',
       },
+    },
+    cart: {
+      title: 'Səbət',
+      empty: 'Səbətiniz boşdur',
+      clear: 'Təmizlə',
+      checkout: 'Ödənişə Keç',
+      addToCart: 'Səbətə Əlavə Et',
     },
     auth: {
       signIn: 'Daxil Ol',
@@ -402,6 +411,8 @@ export const translations = {
       updating: 'Обновление...',
       view: 'Просмотр',
       noOrders: 'У вас пока нет заказов',
+      orderPlaced: 'Заказ оформлен',
+      clickToView: 'Нажмите для подробностей',
       orderStatus: {
         placed: 'Оформлен',
         confirmed: 'Подтвержден',
@@ -502,6 +513,13 @@ export const translations = {
         streetMin: 'Адрес улицы должен быть не менее 5 символов',
         streetMax: 'Адрес улицы не может превышать 200 символов',
       },
+    },
+    cart: {
+      title: 'Корзина',
+      empty: 'Ваша корзина пуста',
+      clear: 'Очистить',
+      checkout: 'Оформить',
+      addToCart: 'В Корзину',
     },
     auth: {
       signIn: 'Войти',
@@ -680,6 +698,8 @@ export const translations = {
       updating: 'Updating...',
       view: 'View',
       noOrders: 'You have no orders yet',
+      orderPlaced: 'Order placed',
+      clickToView: 'Click to view details',
       orderStatus: {
         placed: 'Placed',
         confirmed: 'Confirmed',
@@ -780,6 +800,13 @@ export const translations = {
         streetMin: 'Street address must be at least 5 characters',
         streetMax: 'Street address cannot exceed 200 characters',
       },
+    },
+    cart: {
+      title: 'Shopping Cart',
+      empty: 'Your cart is empty',
+      clear: 'Clear',
+      checkout: 'Checkout',
+      addToCart: 'Add to Cart',
     },
     auth: {
       signIn: 'Sign In',

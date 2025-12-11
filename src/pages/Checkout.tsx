@@ -243,7 +243,7 @@ const Checkout = () => {
                 {t.checkout.continueShopping}
               </Button>
             </Link>
-            <Link to="/dashboard" className="flex-1">
+            <Link to="/dashboard?tab=orders" className="flex-1">
               <Button variant="hero" className="w-full">
                 {t.checkout.viewOrders}
               </Button>

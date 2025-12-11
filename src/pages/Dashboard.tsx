@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2, Camera, ShoppingBag } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useOrders } from '@/contexts/OrderContext';
+import { useOrders, Order } from '@/contexts/OrderContext';
+import { OrderDetailDialog } from '@/components/OrderDetailDialog';
 import { mockProducts } from '@/data/products';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -40,8 +41,10 @@ const Dashboard = () => {
   const { user, isAuthenticated, updatePassword, updatePhone, updateProfile, updateAvatar, logout } = useAuth();
   const { getOrdersByUser } = useOrders();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const userOrders = getOrdersByUser();
-  const [activeTab, setActiveTab] = useState('listings');
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'listings');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isPasswordLoading, setIsPasswordLoading] = useState(false);
@@ -451,7 +454,8 @@ const Dashboard = () => {
                 {userOrders.map((order) => (
                   <div
                     key={order.id}
-                    className="p-4 bg-card border border-border rounded-xl"
+                    onClick={() => setSelectedOrder(order)}
+                    className="p-4 bg-card border border-border rounded-xl cursor-pointer hover:border-primary/50 transition-colors"
                   >
                     <div className="flex items-center gap-4 mb-3">
                       <img
@@ -483,15 +487,20 @@ const Dashboard = () => {
                         </Badge>
                       </div>
                     </div>
-                    <div className="border-t border-border pt-3 text-sm text-muted-foreground">
-                      <p>{order.address.street}, {order.address.city}</p>
-                      <p>{order.address.phone}</p>
-                    </div>
+                    <p className="text-xs text-muted-foreground text-center">
+                      {t.dashboard?.clickToView || 'Click to view details'}
+                    </p>
                   </div>
                 ))}
               </div>
             )}
           </TabsContent>
+
+          <OrderDetailDialog
+            order={selectedOrder}
+            open={!!selectedOrder}
+            onOpenChange={(open) => !open && setSelectedOrder(null)}
+          />
 
           {/* Settings Tab */}
           <TabsContent value="settings" className="mt-6">
