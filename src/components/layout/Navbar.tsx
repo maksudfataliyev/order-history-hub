@@ -22,14 +22,19 @@ export const Navbar = () => {
   const { isAuthenticated, logout } = useAuth();
   const location = useLocation();
 
-  const navLinks = [
+  const publicLinks = [
     { to: '/', label: t.nav.home, icon: Home },
     { to: '/catalog', label: t.nav.catalog, icon: Grid3X3 },
     { to: '/shipping', label: t.shipping.title, icon: Truck },
+  ];
+
+  const authLinks = [
     { to: '/upload', label: t.nav.upload, icon: Plus },
     { to: '/dashboard', label: t.nav.dashboard, icon: User },
     { to: '/sales', label: t.sales?.title || 'My Sales', icon: TrendingUp },
   ];
+
+  const navLinks = isAuthenticated ? [...publicLinks, ...authLinks] : publicLinks;
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -67,13 +72,8 @@ export const Navbar = () => {
 
           {/* Right Side */}
           <div className="flex items-center gap-2">
-            {/* Login/Logout Button */}
-            {isAuthenticated ? (
-              <Button variant="outline" size="sm" className="gap-2 hidden md:flex" onClick={logout}>
-                <LogOut className="w-4 h-4" />
-                {t.nav.logout}
-              </Button>
-            ) : (
+            {/* Login Button - only when NOT logged in */}
+            {!isAuthenticated && (
               <Link to="/auth" className="hidden md:block">
                 <Button variant="outline" size="sm" className="gap-2">
                   <LogIn className="w-4 h-4" />
@@ -146,17 +146,8 @@ export const Navbar = () => {
                 </Link>
               ))}
 
-              {/* Mobile Login/Logout Button */}
-              {isAuthenticated ? (
-                <Button
-                  variant="outline"
-                  className="w-full justify-start gap-3 mt-2"
-                  onClick={() => { logout(); setIsOpen(false); }}
-                >
-                  <LogOut className="w-5 h-5" />
-                  {t.nav.logout}
-                </Button>
-              ) : (
+              {/* Mobile Login Button - only when NOT logged in */}
+              {!isAuthenticated && (
                 <Link to="/auth" onClick={() => setIsOpen(false)}>
                   <Button
                     variant="outline"
