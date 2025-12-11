@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Upload as UploadIcon, X, ImagePlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useListings } from '@/contexts/ListingsContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
 
 const categories = ['sofa', 'chair', 'table', 'bed', 'storage', 'desk'] as const;
@@ -25,8 +28,20 @@ const getConditionLabel = (cond: string, t: ReturnType<typeof useLanguage>['t'])
 
 const Upload = () => {
   const { t } = useLanguage();
+  const { addListing } = useListings();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  
   const [images, setImages] = useState<string[]>([]);
   const [acceptBarter, setAcceptBarter] = useState(true);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [condition, setCondition] = useState('');
+  const [price, setPrice] = useState('');
+  const [width, setWidth] = useState('');
+  const [height, setHeight] = useState('');
+  const [depth, setDepth] = useState('');
+  const [description, setDescription] = useState('');
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -42,10 +57,59 @@ const Upload = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!isAuthenticated) {
+      toast({
+        title: 'Error',
+        description: 'Please login to submit a listing',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+
+    if (!name || !category || !condition || !price) {
+      toast({
+        title: 'Error',
+        description: 'Please fill all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    addListing({
+      name,
+      category,
+      condition,
+      price: parseFloat(price) || 0,
+      description,
+      images,
+      dimensions: {
+        width: parseFloat(width) || 0,
+        height: parseFloat(height) || 0,
+        depth: parseFloat(depth) || 0,
+      },
+      acceptsBarter: acceptBarter,
+    });
+
     toast({
       title: 'Success!',
       description: 'Your listing has been submitted for review.',
     });
+
+    // Reset form
+    setName('');
+    setCategory('');
+    setCondition('');
+    setPrice('');
+    setWidth('');
+    setHeight('');
+    setDepth('');
+    setDescription('');
+    setImages([]);
+    setAcceptBarter(true);
+
+    navigate('/dashboard?tab=mylistings');
   };
 
   return (
@@ -105,12 +169,18 @@ const Upload = () => {
             <div className="grid sm:grid-cols-2 gap-6">
               <div className="sm:col-span-2">
                 <Label htmlFor="name">{t.upload.name}</Label>
-                <Input id="name" placeholder="e.g., Vintage Oak Armchair" className="mt-2" />
+                <Input 
+                  id="name" 
+                  placeholder="e.g., Vintage Oak Armchair" 
+                  className="mt-2" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
 
               <div>
                 <Label htmlFor="category">{t.upload.category}</Label>
-                <Select>
+                <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
@@ -126,7 +196,7 @@ const Upload = () => {
 
               <div>
                 <Label htmlFor="condition">{t.upload.condition}</Label>
-                <Select>
+                <Select value={condition} onValueChange={setCondition}>
                   <SelectTrigger className="mt-2">
                     <SelectValue placeholder="Select condition" />
                   </SelectTrigger>
@@ -142,7 +212,14 @@ const Upload = () => {
 
               <div>
                 <Label htmlFor="price">{t.upload.price} (₼)</Label>
-                <Input id="price" type="number" placeholder="0" className="mt-2" />
+                <Input 
+                  id="price" 
+                  type="number" 
+                  placeholder="0" 
+                  className="mt-2" 
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
               </div>
             </div>
 
@@ -152,15 +229,36 @@ const Upload = () => {
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="width" className="text-sm">{t.upload.width}</Label>
-                  <Input id="width" type="number" placeholder="0" className="mt-1" />
+                  <Input 
+                    id="width" 
+                    type="number" 
+                    placeholder="0" 
+                    className="mt-1" 
+                    value={width}
+                    onChange={(e) => setWidth(e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="height" className="text-sm">{t.upload.height}</Label>
-                  <Input id="height" type="number" placeholder="0" className="mt-1" />
+                  <Input 
+                    id="height" 
+                    type="number" 
+                    placeholder="0" 
+                    className="mt-1" 
+                    value={height}
+                    onChange={(e) => setHeight(e.target.value)}
+                  />
                 </div>
                 <div>
                   <Label htmlFor="depth" className="text-sm">{t.upload.depth}</Label>
-                  <Input id="depth" type="number" placeholder="0" className="mt-1" />
+                  <Input 
+                    id="depth" 
+                    type="number" 
+                    placeholder="0" 
+                    className="mt-1" 
+                    value={depth}
+                    onChange={(e) => setDepth(e.target.value)}
+                  />
                 </div>
               </div>
             </div>
@@ -172,6 +270,8 @@ const Upload = () => {
                 id="description"
                 placeholder="Describe your furniture..."
                 className="mt-2 min-h-[120px]"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 

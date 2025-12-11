@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2, Camera, ShoppingBag } from 'lucide-react';
+import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2, Camera, ShoppingBag, ClipboardList, MapPin } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders, Order } from '@/contexts/OrderContext';
+import { useListings, ListingStatus } from '@/contexts/ListingsContext';
 import { OrderDetailDialog } from '@/components/OrderDetailDialog';
 import { mockProducts } from '@/data/products';
 import { cn } from '@/lib/utils';
@@ -38,11 +39,13 @@ const mockOffers = [
 
 const Dashboard = () => {
   const { t } = useLanguage();
-  const { user, isAuthenticated, updatePassword, updatePhone, updateProfile, updateAvatar, logout } = useAuth();
+  const { user, isAuthenticated, updatePassword, updatePhone, updateProfile, updateAvatar, updateAddress, logout } = useAuth();
   const { getOrdersByUser } = useOrders();
+  const { getListingsByUser } = useListings();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const userOrders = getOrdersByUser();
+  const userListings = getListingsByUser();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'listings');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -51,6 +54,7 @@ const Dashboard = () => {
   const [isPhoneLoading, setIsPhoneLoading] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isAvatarLoading, setIsAvatarLoading] = useState(false);
+  const [isAddressLoading, setIsAddressLoading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const getStatusLabel = (status: string) => {
@@ -71,6 +75,28 @@ const Dashboard = () => {
       sold: t.dashboard.sold as string,
     };
     return statusLabels[status] || status;
+  };
+
+  const getUploadedListingStatusLabel = (status: ListingStatus) => {
+    const statusLabels: Record<ListingStatus, string> = {
+      pending_review: t.listings?.status?.pending_review || 'Under Review',
+      approved: t.listings?.status?.approved || 'Approved',
+      rejected: t.listings?.status?.rejected || 'Rejected',
+      active: t.listings?.status?.active || 'Active',
+      sold: t.listings?.status?.sold || 'Sold',
+    };
+    return statusLabels[status] || status;
+  };
+
+  const getUploadedListingStatusColor = (status: ListingStatus) => {
+    switch (status) {
+      case 'pending_review': return 'bg-yellow-100 text-yellow-700';
+      case 'approved': return 'bg-blue-100 text-blue-700';
+      case 'rejected': return 'bg-destructive/20 text-destructive';
+      case 'active': return 'bg-sage text-sage-dark';
+      case 'sold': return 'bg-muted text-muted-foreground';
+      default: return 'bg-muted text-muted-foreground';
+    }
   };
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,9 +155,17 @@ const Dashboard = () => {
     lastName: z.string().min(2, t.auth?.errors?.lastNameMin || 'Last name must be at least 2 characters'),
   });
 
+  const addressSchema = z.object({
+    street: z.string().min(5, 'Street must be at least 5 characters'),
+    city: z.string().min(2, 'City must be at least 2 characters'),
+    addressDetails: z.string().optional(),
+    zipCode: z.string().optional(),
+  });
+
   type PasswordFormValues = z.infer<typeof passwordSchema>;
   type PhoneFormValues = z.infer<typeof phoneSchema>;
   type ProfileFormValues = z.infer<typeof profileSchema>;
+  type AddressFormValues = z.infer<typeof addressSchema>;
 
   const passwordForm = useForm<PasswordFormValues>({
     resolver: zodResolver(passwordSchema),
@@ -146,6 +180,16 @@ const Dashboard = () => {
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: { firstName: user?.firstName || '', lastName: user?.lastName || '' },
+  });
+
+  const addressForm = useForm<AddressFormValues>({
+    resolver: zodResolver(addressSchema),
+    defaultValues: { 
+      street: user?.address?.street || '', 
+      city: user?.address?.city || '',
+      addressDetails: user?.address?.addressDetails || '',
+      zipCode: user?.address?.zipCode || '',
+    },
   });
 
   const onPasswordSubmit = async (data: PasswordFormValues) => {
@@ -230,6 +274,38 @@ const Dashboard = () => {
     }
   };
 
+  const onAddressSubmit = async (data: AddressFormValues) => {
+    setIsAddressLoading(true);
+    try {
+      const result = await updateAddress({
+        street: data.street,
+        city: data.city,
+        addressDetails: data.addressDetails,
+        zipCode: data.zipCode,
+      });
+      if (result.success) {
+        toast({
+          title: t.dashboard.profileChanged,
+          description: 'Address updated successfully',
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to update address",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to update address. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddressLoading(false);
+    }
+  };
+
   const stats = [
     { label: t.dashboard.active, value: 2, color: 'bg-sage' },
     { label: t.dashboard.pending, value: 1, color: 'bg-primary' },
@@ -307,10 +383,17 @@ const Dashboard = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full sm:w-auto">
+          <TabsList className="w-full sm:w-auto flex-wrap">
             <TabsTrigger value="listings" className="gap-2">
               <Package className="w-4 h-4" />
               <span className="hidden sm:inline">{t.dashboard.myListings}</span>
+            </TabsTrigger>
+            <TabsTrigger value="mylistings" className="gap-2">
+              <ClipboardList className="w-4 h-4" />
+              <span className="hidden sm:inline">{t.listings?.title || 'My Uploads'}</span>
+              {userListings.length > 0 && (
+                <Badge className="ml-1 bg-yellow-100 text-yellow-700">{userListings.length}</Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="messages" className="gap-2">
               <MessageSquare className="w-4 h-4" />
@@ -367,6 +450,53 @@ const Dashboard = () => {
                 </div>
               ))}
             </div>
+          </TabsContent>
+
+          {/* My Uploads Tab */}
+          <TabsContent value="mylistings" className="mt-6">
+            {userListings.length === 0 ? (
+              <div className="text-center py-12 bg-card border border-border rounded-xl">
+                <ClipboardList className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">{t.listings?.noListings || 'No listings yet'}</p>
+                <Link to="/upload">
+                  <Button variant="hero">{t.listings?.uploadFirst || 'Add your first furniture'}</Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {userListings.map((listing) => (
+                  <div
+                    key={listing.id}
+                    className="p-4 bg-card border border-border rounded-xl"
+                  >
+                    <div className="flex items-start gap-4">
+                      {listing.images[0] ? (
+                        <img src={listing.images[0]} alt={listing.name} className="w-20 h-20 object-cover rounded-lg" />
+                      ) : (
+                        <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center">
+                          <Package className="w-8 h-8 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-foreground truncate">{listing.name}</h3>
+                        <p className="text-sm text-muted-foreground">₼{listing.price}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t.listings?.uploadedAt || 'Uploaded'}: {new Date(listing.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge className={getUploadedListingStatusColor(listing.status)}>
+                        {getUploadedListingStatusLabel(listing.status)}
+                      </Badge>
+                    </div>
+                    {listing.reviewNote && (
+                      <p className="mt-3 text-sm text-muted-foreground bg-muted p-2 rounded">
+                        Note: {listing.reviewNote}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           {/* Messages Tab */}
@@ -670,6 +800,46 @@ const Dashboard = () => {
                     ) : (
                       t.dashboard.save
                     )}
+                  </Button>
+                </form>
+              </div>
+
+              {/* Address */}
+              <div className="bg-card border border-border rounded-xl p-6 md:col-span-2">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  <h3 className="font-display text-xl font-semibold text-foreground">
+                    {t.auth?.street || 'Address'}
+                  </h3>
+                </div>
+                {user?.address ? (
+                  <div className="mb-4 p-3 bg-muted rounded-lg">
+                    <p className="text-sm text-foreground">{user.address.street}</p>
+                    <p className="text-sm text-muted-foreground">{user.address.city}{user.address.zipCode && `, ${user.address.zipCode}`}</p>
+                    {user.address.addressDetails && <p className="text-sm text-muted-foreground">{user.address.addressDetails}</p>}
+                  </div>
+                ) : null}
+                <form onSubmit={addressForm.handleSubmit(onAddressSubmit)} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">{t.checkout?.city || 'City'}</Label>
+                      <Input id="city" placeholder="Baku" disabled={isAddressLoading} {...addressForm.register("city")} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="zipCode">{t.auth?.zipCode || 'Zip Code'}</Label>
+                      <Input id="zipCode" placeholder="AZ1000" disabled={isAddressLoading} {...addressForm.register("zipCode")} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="street">{t.auth?.street || 'Street'}</Label>
+                    <Input id="street" placeholder="Street, house, apartment" disabled={isAddressLoading} {...addressForm.register("street")} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="addressDetails">{t.auth?.addressDetails || 'Details'}</Label>
+                    <Input id="addressDetails" placeholder="Additional details" disabled={isAddressLoading} {...addressForm.register("addressDetails")} />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isAddressLoading}>
+                    {isAddressLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating...</> : t.dashboard.save}
                   </Button>
                 </form>
               </div>

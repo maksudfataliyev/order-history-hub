@@ -363,6 +363,10 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
     email: z.string().email(t.auth.errors.invalidEmail),
     phone: z.string()
       .regex(azPhoneRegex, t.auth.errors.phoneInvalidFormat),
+    street: z.string().min(5, 'Street must be at least 5 characters').optional().or(z.literal('')),
+    city: z.string().min(2, 'City must be at least 2 characters').optional().or(z.literal('')),
+    addressDetails: z.string().optional(),
+    zipCode: z.string().optional(),
     password: z.string().min(8, t.auth.errors.passwordMin),
     confirmPassword: z.string().min(8, t.auth.errors.passwordMin),
     terms: z.literal(true, { errorMap: () => ({ message: t.auth.errors.agreeTerms }) }),
@@ -382,7 +386,7 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<SignUpFormValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: { firstName: "", lastName: "", email: "", phone: "+994 ", password: "", confirmPassword: "", terms: undefined as unknown as true },
+    defaultValues: { firstName: "", lastName: "", email: "", phone: "+994 ", street: "", city: "", addressDetails: "", zipCode: "", password: "", confirmPassword: "", terms: undefined as unknown as true },
   });
 
   const terms = watch("terms");
@@ -417,12 +421,20 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
   const onSubmit = async (data: SignUpFormValues) => {
     setFormState((prev) => ({ ...prev, isLoading: true, error: null }));
     try {
+      const address = (data.street && data.city) ? {
+        street: data.street,
+        city: data.city,
+        addressDetails: data.addressDetails,
+        zipCode: data.zipCode,
+      } : undefined;
+
       const result = await registerUser({
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         password: data.password,
         phone: data.phone,
+        address,
       });
       
       if (result.success) {
@@ -496,6 +508,57 @@ function AuthSignUp({ onSignIn }: AuthSignUpProps) {
             {...register("email")}
           />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+        </div>
+
+        {/* Address Fields */}
+        <div className="pt-4 border-t border-border">
+          <p className="text-sm font-medium text-muted-foreground mb-4">{t.auth.street} ({t.auth.addressDetails || 'Optional'})</p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="city">{t.checkout?.city || 'City'}</Label>
+              <Input
+                id="city"
+                type="text"
+                placeholder="Baku"
+                disabled={formState.isLoading}
+                className={cn(errors.city && "border-destructive")}
+                {...register("city")}
+              />
+              {errors.city && <p className="text-xs text-destructive">{errors.city.message}</p>}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="zipCode">{t.auth.zipCode || 'Zip Code'}</Label>
+              <Input
+                id="zipCode"
+                type="text"
+                placeholder="AZ1000"
+                disabled={formState.isLoading}
+                {...register("zipCode")}
+              />
+            </div>
+          </div>
+          <div className="space-y-2 mt-4">
+            <Label htmlFor="street">{t.auth.street || 'Street'}</Label>
+            <Input
+              id="street"
+              type="text"
+              placeholder="Street, house, apartment"
+              disabled={formState.isLoading}
+              className={cn(errors.street && "border-destructive")}
+              {...register("street")}
+            />
+            {errors.street && <p className="text-xs text-destructive">{errors.street.message}</p>}
+          </div>
+          <div className="space-y-2 mt-4">
+            <Label htmlFor="addressDetails">{t.auth.addressDetails || 'Address Details'}</Label>
+            <Input
+              id="addressDetails"
+              type="text"
+              placeholder="Additional details (floor, entrance, etc.)"
+              disabled={formState.isLoading}
+              {...register("addressDetails")}
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
