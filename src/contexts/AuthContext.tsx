@@ -1,6 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+export interface UserAddress {
+  street: string;
+  city: string;
+  addressDetails?: string;
+  zipCode?: string;
+}
+
 export interface User {
   id: string;
   firstName: string;
@@ -9,6 +16,7 @@ export interface User {
   phone: string;
   avatarUrl?: string;
   createdAt: string;
+  address?: UserAddress;
 }
 
 interface StoredUser extends User {
@@ -19,9 +27,10 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (data: { firstName: string; lastName: string; email: string; password: string; phone: string }) => Promise<{ success: boolean; error?: string }>;
+  register: (data: { firstName: string; lastName: string; email: string; password: string; phone: string; address?: UserAddress }) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updatePassword: (currentPassword: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
+  updateAddress: (address: UserAddress) => Promise<{ success: boolean; error?: string }>;
   updatePhone: (phone: string) => Promise<{ success: boolean; error?: string }>;
   updateProfile: (data: { firstName: string; lastName: string }) => Promise<{ success: boolean; error?: string }>;
   updateAvatar: (avatarUrl: string | null) => Promise<{ success: boolean; error?: string }>;
@@ -75,7 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { success: true };
   };
 
-  const register = async (data: { firstName: string; lastName: string; email: string; password: string; phone: string }): Promise<{ success: boolean; error?: string }> => {
+  const register = async (data: { firstName: string; lastName: string; email: string; password: string; phone: string; address?: UserAddress }): Promise<{ success: boolean; error?: string }> => {
     const users = getUsers();
     
     if (users.some(u => u.email.toLowerCase() === data.email.toLowerCase())) {
@@ -89,6 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email: data.email,
       password: data.password,
       phone: data.phone,
+      address: data.address,
       createdAt: new Date().toISOString(),
     };
     
@@ -179,8 +189,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { success: true };
   };
 
+  const updateAddress = async (address: UserAddress): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: 'notLoggedIn' };
+    
+    const users = getUsers();
+    const userIndex = users.findIndex(u => u.id === user.id);
+    
+    if (userIndex === -1) return { success: false, error: 'userNotFound' };
+    
+    users[userIndex].address = address;
+    saveUsers(users);
+    
+    const updatedUser = { ...user, address };
+    setUser(updatedUser);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+    
+    return { success: true };
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updatePassword, updatePhone, updateProfile, updateAvatar }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updatePassword, updatePhone, updateProfile, updateAvatar, updateAddress }}>
       {children}
     </AuthContext.Provider>
   );
