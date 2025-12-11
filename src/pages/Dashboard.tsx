@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2, Camera, ShoppingBag, ClipboardList, MapPin } from 'lucide-react';
+import { Package, MessageSquare, RefreshCw, Settings, Plus, Eye, EyeOff, Loader2, Camera, ShoppingBag, ClipboardList, MapPin, Check, X } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,7 +31,17 @@ const mockMessages = [
   { id: '3', from: 'Rashad K.', message: 'Thank you for the quick delivery!', time: '3d ago', unread: false },
 ];
 
-const mockOffers = [
+interface Offer {
+  id: string;
+  from: string;
+  type: 'barter' | 'price';
+  item?: string;
+  amount?: number;
+  forItem: string;
+  status: 'pending' | 'accepted' | 'declined' | 'countered';
+}
+
+const initialOffers: Offer[] = [
   { id: '1', from: 'Nigar A.', type: 'barter', item: 'Oak Dining Table', forItem: 'Mid-Century Sofa', status: 'pending' },
   { id: '2', from: 'Elvin G.', type: 'price', amount: 750, forItem: 'Mid-Century Sofa', status: 'pending' },
   { id: '3', from: 'Kamran S.', type: 'barter', item: 'Office Desk', forItem: 'Vintage Chair', status: 'accepted' },
@@ -55,6 +65,9 @@ const Dashboard = () => {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isAvatarLoading, setIsAvatarLoading] = useState(false);
   const [isAddressLoading, setIsAddressLoading] = useState(false);
+  const [offers, setOffers] = useState<Offer[]>(initialOffers);
+  const [counterOfferId, setCounterOfferId] = useState<string | null>(null);
+  const [counterPrice, setCounterPrice] = useState('');
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const getStatusLabel = (status: string) => {
@@ -124,6 +137,25 @@ const Dashboard = () => {
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString();
+  };
+
+  const handleAcceptOffer = (offerId: string) => {
+    setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'accepted' as const } : o));
+    alert('Offer accepted!');
+  };
+
+  const handleDeclineOffer = (offerId: string) => {
+    setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'declined' as const } : o));
+    alert('Offer declined');
+  };
+
+  const handleCounterOffer = (offerId: string) => {
+    if (counterPrice) {
+      setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'countered' as const } : o));
+      alert(`Counter offer of ₼${counterPrice} sent!`);
+      setCounterOfferId(null);
+      setCounterPrice('');
+    }
   };
 
   // Redirect to auth if not logged in
@@ -531,7 +563,7 @@ const Dashboard = () => {
           {/* Offers Tab */}
           <TabsContent value="offers" className="mt-6">
             <div className="space-y-4">
-              {mockOffers.map((offer) => (
+              {offers.map((offer) => (
                 <div
                   key={offer.id}
                   className="p-4 bg-card border border-border rounded-xl"
@@ -549,18 +581,48 @@ const Dashboard = () => {
                     <Badge
                       className={cn(
                         offer.status === 'pending' && 'bg-primary/20 text-primary',
-                        offer.status === 'accepted' && 'bg-sage text-sage-dark'
+                        offer.status === 'accepted' && 'bg-sage text-sage-dark',
+                        offer.status === 'declined' && 'bg-destructive/20 text-destructive',
+                        offer.status === 'countered' && 'bg-blue-100 text-blue-700'
                       )}
                     >
                       {offer.status}
                     </Badge>
                   </div>
                   {offer.status === 'pending' && (
-                    <div className="flex gap-2">
-                      <Button variant="hero" size="sm">Accept</Button>
-                      <Button variant="outline" size="sm">Decline</Button>
-                      <Button variant="ghost" size="sm">Counter</Button>
-                    </div>
+                    <>
+                      <div className="flex gap-2">
+                        <Button variant="hero" size="sm" className="gap-1" onClick={() => handleAcceptOffer(offer.id)}>
+                          <Check className="w-3 h-3" />
+                          Accept
+                        </Button>
+                        <Button variant="destructive" size="sm" className="gap-1" onClick={() => handleDeclineOffer(offer.id)}>
+                          <X className="w-3 h-3" />
+                          Decline
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setCounterOfferId(counterOfferId === offer.id ? null : offer.id)}
+                        >
+                          Counter
+                        </Button>
+                      </div>
+                      {counterOfferId === offer.id && (
+                        <div className="mt-3 flex gap-2 items-center">
+                          <Input
+                            type="number"
+                            placeholder="Enter counter price"
+                            value={counterPrice}
+                            onChange={(e) => setCounterPrice(e.target.value)}
+                            className="w-40"
+                          />
+                          <Button size="sm" onClick={() => handleCounterOffer(offer.id)}>
+                            Send
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               ))}

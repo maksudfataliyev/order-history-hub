@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Package, DollarSign, Calendar, Filter, Eye, Check, X, MessageSquare } from 'lucide-react';
+import { TrendingUp, Package, DollarSign, Calendar, Filter, Eye } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,30 +13,10 @@ import { cn } from '@/lib/utils';
 const Sales = () => {
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
-  const { getSalesByUser, getSalesByPeriod, updateSaleStatus } = useSales();
+  const { getSalesByUser, getSalesByPeriod } = useSales();
   const navigate = useNavigate();
   const [period, setPeriod] = useState<'week' | 'month' | 'year' | 'all'>('all');
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
-  const [counterPrice, setCounterPrice] = useState<string>('');
-  const [showCounter, setShowCounter] = useState<string | null>(null);
-
-  const handleAccept = (saleId: string) => {
-    updateSaleStatus(saleId, 'confirmed');
-    alert('Offer accepted!');
-  };
-
-  const handleDecline = (saleId: string) => {
-    updateSaleStatus(saleId, 'pending');
-    alert('Offer declined');
-  };
-
-  const handleCounter = (saleId: string) => {
-    if (counterPrice) {
-      alert(`Counter offer of ₼${counterPrice} sent!`);
-      setShowCounter(null);
-      setCounterPrice('');
-    }
-  };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -215,87 +194,34 @@ const Sales = () => {
 
                 {/* Expanded Details */}
                 {selectedSale?.id === sale.id && (
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div>
-                        <h5 className="font-semibold text-foreground mb-2">
-                          {t.sales?.buyerInfo || 'Buyer Information'}
-                        </h5>
-                        <div className="space-y-1 text-sm">
-                          <p><span className="text-muted-foreground">{t.auth?.email || 'Email'}:</span> {sale.buyerEmail}</p>
-                          <p><span className="text-muted-foreground">{t.checkout?.city || 'City'}:</span> {sale.buyerAddress.city}</p>
-                          <p><span className="text-muted-foreground">{t.checkout?.street || 'Street'}:</span> {sale.buyerAddress.street}</p>
-                          {sale.buyerAddress.addressDetails && (
-                            <p><span className="text-muted-foreground">{t.auth?.addressDetails || 'Details'}:</span> {sale.buyerAddress.addressDetails}</p>
-                          )}
-                          {sale.buyerAddress.zipCode && (
-                            <p><span className="text-muted-foreground">{t.auth?.zipCode || 'Zip'}:</span> {sale.buyerAddress.zipCode}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        <h5 className="font-semibold text-foreground mb-2">
-                          {t.sales?.orderDetails || 'Order Details'}
-                        </h5>
-                        <div className="space-y-1 text-sm">
-                          <p><span className="text-muted-foreground">{t.sales?.orderId || 'Order ID'}:</span> #{sale.id.slice(0, 8).toUpperCase()}</p>
-                          <p><span className="text-muted-foreground">{t.sales?.product || 'Product'}:</span> ₼{sale.productPrice.toFixed(2)}</p>
-                          <p><span className="text-muted-foreground">{t.checkout?.shipping || 'Shipping'}:</span> ₼{sale.shippingPrice.toFixed(2)}</p>
-                          <p className="font-semibold"><span className="text-muted-foreground">{t.checkout?.total || 'Total'}:</span> ₼{sale.total.toFixed(2)}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Offer Actions for Pending Sales */}
-                    {sale.status === 'pending' && (
-                      <div className="mt-4 pt-4 border-t border-border">
-                        <h5 className="font-semibold text-foreground mb-3">Respond to Offer</h5>
-                        <div className="flex flex-wrap gap-2">
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="gap-2"
-                            onClick={(e) => { e.stopPropagation(); handleAccept(sale.id); }}
-                          >
-                            <Check className="w-4 h-4" />
-                            Accept
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-2"
-                            onClick={(e) => { e.stopPropagation(); setShowCounter(showCounter === sale.id ? null : sale.id); }}
-                          >
-                            <MessageSquare className="w-4 h-4" />
-                            Counter
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="gap-2"
-                            onClick={(e) => { e.stopPropagation(); handleDecline(sale.id); }}
-                          >
-                            <X className="w-4 h-4" />
-                            Decline
-                          </Button>
-                        </div>
-                        
-                        {showCounter === sale.id && (
-                          <div className="mt-3 flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
-                            <Input
-                              type="number"
-                              placeholder="Enter counter price"
-                              value={counterPrice}
-                              onChange={(e) => setCounterPrice(e.target.value)}
-                              className="w-40"
-                            />
-                            <Button size="sm" onClick={() => handleCounter(sale.id)}>
-                              Send Counter
-                            </Button>
-                          </div>
+                  <div className="mt-4 pt-4 border-t border-border grid sm:grid-cols-2 gap-4">
+                    <div>
+                      <h5 className="font-semibold text-foreground mb-2">
+                        {t.sales?.buyerInfo || 'Buyer Information'}
+                      </h5>
+                      <div className="space-y-1 text-sm">
+                        <p><span className="text-muted-foreground">{t.auth?.email || 'Email'}:</span> {sale.buyerEmail}</p>
+                        <p><span className="text-muted-foreground">{t.checkout?.city || 'City'}:</span> {sale.buyerAddress.city}</p>
+                        <p><span className="text-muted-foreground">{t.checkout?.street || 'Street'}:</span> {sale.buyerAddress.street}</p>
+                        {sale.buyerAddress.addressDetails && (
+                          <p><span className="text-muted-foreground">{t.auth?.addressDetails || 'Details'}:</span> {sale.buyerAddress.addressDetails}</p>
+                        )}
+                        {sale.buyerAddress.zipCode && (
+                          <p><span className="text-muted-foreground">{t.auth?.zipCode || 'Zip'}:</span> {sale.buyerAddress.zipCode}</p>
                         )}
                       </div>
-                    )}
+                    </div>
+                    <div>
+                      <h5 className="font-semibold text-foreground mb-2">
+                        {t.sales?.orderDetails || 'Order Details'}
+                      </h5>
+                      <div className="space-y-1 text-sm">
+                        <p><span className="text-muted-foreground">{t.sales?.orderId || 'Order ID'}:</span> #{sale.id.slice(0, 8).toUpperCase()}</p>
+                        <p><span className="text-muted-foreground">{t.sales?.product || 'Product'}:</span> ₼{sale.productPrice.toFixed(2)}</p>
+                        <p><span className="text-muted-foreground">{t.checkout?.shipping || 'Shipping'}:</span> ₼{sale.shippingPrice.toFixed(2)}</p>
+                        <p className="font-semibold"><span className="text-muted-foreground">{t.checkout?.total || 'Total'}:</span> ₼{sale.total.toFixed(2)}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
