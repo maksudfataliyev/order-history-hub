@@ -1,5 +1,5 @@
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Scale, RefreshCw, ShoppingCart, Check, User } from 'lucide-react';
+import { ArrowLeft, Scale, RefreshCw, ShoppingCart, Check, User, Plus } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { mockProducts } from '@/data/products';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompare } from '@/contexts/CompareContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
 
 const getConditionLabel = (condition: string, t: ReturnType<typeof useLanguage>['t']) => {
@@ -29,9 +30,11 @@ const ProductDetail = () => {
   const { t } = useLanguage();
   const { addToCompare, isInCompare } = useCompare();
   const { isAuthenticated } = useAuth();
+  const { addToCart, items } = useCart();
   const navigate = useNavigate();
   const product = mockProducts.find(p => p.id === id);
   const inCompare = product ? isInCompare(product.id) : false;
+  const inCart = product ? items.some(item => item.id === product.id) : false;
 
   if (!product) {
     return (
@@ -72,6 +75,24 @@ const ProductDetail = () => {
       title: 'Offer Feature',
       description: 'Barter offer system coming soon!',
     });
+  };
+
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      toast({ title: 'Login Required', description: 'Please login to add items to cart' });
+      navigate('/auth');
+      return;
+    }
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      category: product.category,
+      condition: product.condition,
+      dimensions: `${product.dimensions.width}x${product.dimensions.height}x${product.dimensions.depth}cm`,
+    });
+    toast({ title: t.cart?.addToCart || 'Added to Cart', description: product.name });
   };
 
   const handleBuyNow = () => {
@@ -160,10 +181,16 @@ const ProductDetail = () => {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-8">
-              <Button variant="hero" size="lg" className="flex-1" onClick={handleBuyNow}>
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                {t.product.buyNow}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <Button 
+                variant={inCart ? "outline" : "hero"} 
+                size="lg" 
+                className="flex-1" 
+                onClick={handleAddToCart}
+                disabled={inCart}
+              >
+                {inCart ? <Check className="w-5 h-5 mr-2" /> : <Plus className="w-5 h-5 mr-2" />}
+                {inCart ? 'In Cart' : (t.cart?.addToCart || 'Add to Cart')}
               </Button>
               {product.acceptsBarter && (
                 <Button variant="sage" size="lg" className="flex-1" onClick={handleMakeOffer}>
@@ -171,6 +198,13 @@ const ProductDetail = () => {
                   {t.product.makeOffer}
                 </Button>
               )}
+            </div>
+
+            <div className="flex gap-3 mb-8">
+              <Button variant="outline" size="lg" className="flex-1" onClick={handleBuyNow}>
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                {t.product.buyNow}
+              </Button>
             </div>
 
             <Button
