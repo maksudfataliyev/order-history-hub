@@ -10,6 +10,8 @@ import { OrderProvider } from "@/contexts/OrderContext";
 import { CartProvider } from "@/contexts/CartContext";
 import { ListingsProvider } from "@/contexts/ListingsContext";
 import { SalesProvider } from "@/contexts/SalesContext";
+import { OffersProvider } from "@/contexts/OffersContext";
+import { CommentsProvider } from "@/contexts/CommentsContext";
 import Index from "./pages/Index";
 import Catalog from "./pages/Catalog";
 import ProductDetail from "./pages/ProductDetail";
@@ -33,28 +35,32 @@ const App = () => (
           <CartProvider>
             <ListingsProvider>
               <SalesProvider>
-                <CompareProvider>
-                  <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <BrowserRouter>
-                      <Routes>
-                        <Route path="/" element={<Index />} />
-                        <Route path="/catalog" element={<Catalog />} />
-                        <Route path="/product/:id" element={<ProductDetail />} />
-                        <Route path="/upload" element={<Upload />} />
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/compare" element={<Compare />} />
-                        <Route path="/auth" element={<AuthPage />} />
-                        <Route path="/shipping" element={<Shipping />} />
-                        <Route path="/checkout" element={<Checkout />} />
-                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                        <Route path="/sales" element={<Sales />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </BrowserRouter>
-                  </TooltipProvider>
-                </CompareProvider>
+                <OffersProvider>
+                  <CommentsProvider>
+                    <CompareProvider>
+                      <TooltipProvider>
+                        <Toaster />
+                        <Sonner />
+                        <BrowserRouter>
+                          <Routes>
+                            <Route path="/" element={<Index />} />
+                            <Route path="/catalog" element={<Catalog />} />
+                            <Route path="/product/:id" element={<ProductDetail />} />
+                            <Route path="/upload" element={<Upload />} />
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/compare" element={<Compare />} />
+                            <Route path="/auth" element={<AuthPage />} />
+                            <Route path="/shipping" element={<Shipping />} />
+                            <Route path="/checkout" element={<Checkout />} />
+                            <Route path="/forgot-password" element={<ForgotPassword />} />
+                            <Route path="/sales" element={<Sales />} />
+                            <Route path="*" element={<NotFound />} />
+                          </Routes>
+                        </BrowserRouter>
+                      </TooltipProvider>
+                    </CompareProvider>
+                  </CommentsProvider>
+                </OffersProvider>
               </SalesProvider>
             </ListingsProvider>
           </CartProvider>

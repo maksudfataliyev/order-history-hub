@@ -1,15 +1,20 @@
+import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Scale, RefreshCw, ShoppingCart, Check, User, Plus } from 'lucide-react';
+import { ArrowLeft, Scale, RefreshCw, ShoppingCart, Check, User, Plus, Send, Trash2 } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { mockProducts } from '@/data/products';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCompare } from '@/contexts/CompareContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
+import { useComments } from '@/contexts/CommentsContext';
 import { toast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const getConditionLabel = (condition: string, t: ReturnType<typeof useLanguage>['t']) => {
   const conditionMap: Record<string, string> = {
@@ -29,12 +34,19 @@ const ProductDetail = () => {
   const { id } = useParams();
   const { t } = useLanguage();
   const { addToCompare, isInCompare } = useCompare();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const { addToCart, items } = useCart();
+  const { addComment, getCommentsByProduct, deleteComment } = useComments();
   const navigate = useNavigate();
   const product = mockProducts.find(p => p.id === id);
   const inCompare = product ? isInCompare(product.id) : false;
   const inCart = product ? items.some(item => item.id === product.id) : false;
+  
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [commentText, setCommentText] = useState('');
+  
+  const productImages = product?.images || (product ? [product.image] : []);
+  const productComments = product ? getCommentsByProduct(product.id) : [];
 
   if (!product) {
     return (
@@ -119,18 +131,44 @@ const ProductDetail = () => {
         </Link>
 
         <div className="grid lg:grid-cols-2 gap-12">
-          {/* Image */}
-          <div className="relative">
-            <img
-              src={product.image}
-              alt={product.name}
-              className="w-full aspect-square object-cover rounded-2xl shadow-medium"
-            />
-            {product.acceptsBarter && (
-              <Badge className="absolute top-4 left-4 bg-sage text-sage-dark">
-                <RefreshCw className="w-3 h-3 mr-1" />
-                Barter Available
-              </Badge>
+          {/* Image Section */}
+          <div className="space-y-4">
+            <div className="relative">
+              <img
+                src={productImages[selectedImage]}
+                alt={product.name}
+                className="w-full aspect-square object-cover rounded-2xl shadow-medium"
+              />
+              {product.acceptsBarter && (
+                <Badge className="absolute top-4 left-4 bg-sage text-sage-dark">
+                  <RefreshCw className="w-3 h-3 mr-1" />
+                  Barter Available
+                </Badge>
+              )}
+            </div>
+            
+            {/* Image Strip */}
+            {productImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {productImages.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImage(index)}
+                    className={cn(
+                      "flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all",
+                      selectedImage === index 
+                        ? "border-primary ring-2 ring-primary/20" 
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <img
+                      src={img}
+                      alt={`${product.name} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
@@ -268,6 +306,103 @@ const ProductDetail = () => {
             </div>
           </TabsContent>
         </Tabs>
+
+        {/* Comments Section */}
+        <div className="mt-12">
+          <h2 className="font-display text-2xl font-bold text-foreground mb-6">
+            Comments ({productComments.length})
+          </h2>
+          
+          {/* Add Comment */}
+          {isAuthenticated ? (
+            <div className="bg-card border border-border rounded-xl p-4 mb-6">
+              <div className="flex gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={user?.avatarUrl} />
+                  <AvatarFallback className="bg-muted text-muted-foreground">
+                    {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <Textarea
+                    placeholder="Write a comment..."
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    className="mb-3 resize-none"
+                    rows={3}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (commentText.trim()) {
+                        addComment(product.id, commentText.trim());
+                        setCommentText('');
+                        toast({ title: 'Comment added!' });
+                      }
+                    }}
+                    disabled={!commentText.trim()}
+                  >
+                    <Send className="w-4 h-4 mr-2" />
+                    Post Comment
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-muted/50 border border-border rounded-xl p-6 text-center mb-6">
+              <p className="text-muted-foreground mb-3">Login to leave a comment</p>
+              <Button variant="outline" onClick={() => navigate('/auth')}>
+                Login
+              </Button>
+            </div>
+          )}
+
+          {/* Comments List */}
+          {productComments.length === 0 ? (
+            <div className="text-center py-8 bg-card border border-border rounded-xl">
+              <p className="text-muted-foreground">No comments yet. Be the first to comment!</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {productComments.map((comment) => (
+                <div key={comment.id} className="bg-card border border-border rounded-xl p-4">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={comment.userAvatar} />
+                      <AvatarFallback className="bg-muted text-muted-foreground">
+                        {comment.userName.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-semibold text-foreground">{comment.userName}</span>
+                          <span className="text-sm text-muted-foreground ml-2">
+                            {new Date(comment.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        {user?.id === comment.userId && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => {
+                              deleteComment(comment.id);
+                              toast({ title: 'Comment deleted' });
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground mt-1">{comment.content}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </Layout>
   );
