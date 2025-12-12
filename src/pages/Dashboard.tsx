@@ -405,11 +405,14 @@ const Dashboard = () => {
           <TabsList className="w-full sm:w-auto flex-wrap">
             <TabsTrigger value="listings" className="gap-2">
               <Package className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.dashboard.myListings}</span>
+              <span className="hidden sm:inline">{t.dashboard.active || 'Active'}</span>
+              {myListings.length > 0 && (
+                <Badge className="ml-1 bg-sage text-sage-dark">{myListings.length}</Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="mylistings" className="gap-2">
               <ClipboardList className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.listings?.title || 'My Uploads'}</span>
+              <span className="hidden sm:inline">{t.dashboard.pending || 'Pending'}</span>
               {userListings.length > 0 && (
                 <Badge className="ml-1 bg-yellow-100 text-yellow-700">{userListings.length}</Badge>
               )}
@@ -417,12 +420,16 @@ const Dashboard = () => {
             <TabsTrigger value="messages" className="gap-2">
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">{t.dashboard.messages}</span>
-              <Badge className="ml-1 bg-primary text-primary-foreground">1</Badge>
+              {mockMessages.filter(m => m.unread).length > 0 && (
+                <Badge className="ml-1 bg-primary text-primary-foreground">{mockMessages.filter(m => m.unread).length}</Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="offers" className="gap-2">
               <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">{t.dashboard.offers}</span>
-              <Badge className="ml-1 bg-sage text-sage-dark">2</Badge>
+              {sellerOffers.filter(o => o.status === 'pending').length > 0 && (
+                <Badge className="ml-1 bg-sage text-sage-dark">{sellerOffers.filter(o => o.status === 'pending').length}</Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="orders" className="gap-2">
               <ShoppingBag className="w-4 h-4" />
