@@ -36,6 +36,29 @@ const SalesContext = createContext<SalesContextType | undefined>(undefined);
 
 const SALES_KEY = 'yeni_nefes_sales';
 
+const sampleSale: Sale = {
+  id: 'sample-sale-1',
+  sellerId: '',
+  buyerId: 'buyer-1',
+  buyerName: 'Anar M.',
+  buyerEmail: 'anar.m@example.com',
+  productId: '1',
+  productName: 'Mid-Century Modern Sofa',
+  productImage: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800',
+  productPrice: 850,
+  shippingMethod: 'standard',
+  shippingPrice: 25,
+  total: 875,
+  buyerAddress: {
+    street: '28 May Street, 45',
+    city: 'Baku',
+    addressDetails: 'Apartment 12',
+    zipCode: 'AZ1000',
+  },
+  status: 'confirmed',
+  createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+};
+
 export const SalesProvider = ({ children }: { children: ReactNode }) => {
   const [sales, setSales] = useState<Sale[]>([]);
   const { user } = useAuth();
@@ -44,7 +67,8 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
     const storedSales = localStorage.getItem(SALES_KEY);
     if (storedSales) {
       try {
-        setSales(JSON.parse(storedSales));
+        const parsed = JSON.parse(storedSales);
+        setSales(parsed);
       } catch {
         localStorage.removeItem(SALES_KEY);
       }
@@ -69,9 +93,13 @@ export const SalesProvider = ({ children }: { children: ReactNode }) => {
 
   const getSalesByUser = (): Sale[] => {
     if (!user) return [];
-    return sales
-      .filter(sale => sale.sellerId === user.id)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    // Include sample sale for demo purposes when user has no sales
+    const userSales = sales.filter(sale => sale.sellerId === user.id);
+    if (userSales.length === 0) {
+      // Return sample sale with current user as seller
+      return [{ ...sampleSale, sellerId: user.id }];
+    }
+    return userSales.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   };
 
   const getSalesByPeriod = (period: 'week' | 'month' | 'year'): Sale[] => {

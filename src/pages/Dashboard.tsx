@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const myListings = mockProducts.slice(0, 3).map((p, i) => ({
   ...p,
-  status: i === 0 ? 'active' : i === 1 ? 'pending' : 'sold',
+  status: i === 0 ? 'active' : 'sold',
 }));
 
 const mockMessages = [
@@ -412,7 +412,7 @@ const Dashboard = () => {
             </TabsTrigger>
             <TabsTrigger value="mylistings" className="gap-2">
               <ClipboardList className="w-4 h-4" />
-              <span className="hidden sm:inline">{t.dashboard.pending || 'Pending'}</span>
+              <span className="hidden sm:inline">{t.listings?.status?.pending_review || 'Pending Review'}</span>
               {userListings.length > 0 && (
                 <Badge className="ml-1 bg-yellow-100 text-yellow-700">{userListings.length}</Badge>
               )}
