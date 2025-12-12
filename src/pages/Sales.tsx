@@ -28,12 +28,10 @@ const Sales = () => {
 
   const totalRevenue = sales.reduce((sum, sale) => sum + sale.total, 0);
   const totalOrders = sales.length;
-  const pendingOrders = sales.filter(s => s.status === 'pending').length;
-  const completedOrders = sales.filter(s => s.status === 'delivered').length;
+  const confirmedOrders = sales.filter(s => s.status === 'confirmed' || s.status === 'shipped' || s.status === 'delivered').length;
 
   const getStatusLabel = (status: Sale['status']) => {
     const labels: Record<string, string> = {
-      pending: t.sales?.pending || 'Pending',
       confirmed: t.sales?.confirmed || 'Confirmed',
       shipped: t.sales?.shipped || 'Shipped',
       delivered: t.sales?.delivered || 'Delivered',
@@ -43,7 +41,6 @@ const Sales = () => {
 
   const getStatusColor = (status: Sale['status']) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-700';
       case 'confirmed': return 'bg-blue-100 text-blue-700';
       case 'shipped': return 'bg-orange-100 text-orange-700';
       case 'delivered': return 'bg-sage text-sage-dark';
@@ -112,21 +109,12 @@ const Sales = () => {
           </div>
           <div className="bg-card border border-border rounded-xl p-5">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-yellow-700" />
-              </div>
-              <span className="text-sm text-muted-foreground">{t.sales?.pendingOrders || 'Pending'}</span>
-            </div>
-            <p className="font-display text-2xl font-bold text-foreground">{pendingOrders}</p>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-5">
-            <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-sage/20 rounded-lg flex items-center justify-center">
                 <TrendingUp className="w-5 h-5 text-sage-dark" />
               </div>
-              <span className="text-sm text-muted-foreground">{t.sales?.completed || 'Completed'}</span>
+              <span className="text-sm text-muted-foreground">{t.sales?.confirmed || 'Confirmed'}</span>
             </div>
-            <p className="font-display text-2xl font-bold text-foreground">{completedOrders}</p>
+            <p className="font-display text-2xl font-bold text-foreground">{confirmedOrders}</p>
           </div>
         </div>
 

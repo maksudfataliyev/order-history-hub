@@ -14,6 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders, Order } from '@/contexts/OrderContext';
 import { useListings, ListingStatus } from '@/contexts/ListingsContext';
+import { useOffers } from '@/contexts/OffersContext';
 import { OrderDetailDialog } from '@/components/OrderDetailDialog';
 import { mockProducts } from '@/data/products';
 import { cn } from '@/lib/utils';
@@ -31,31 +32,18 @@ const mockMessages = [
   { id: '3', from: 'Rashad K.', message: 'Thank you for the quick delivery!', time: '3d ago', unread: false },
 ];
 
-interface Offer {
-  id: string;
-  from: string;
-  type: 'barter' | 'price';
-  item?: string;
-  amount?: number;
-  forItem: string;
-  status: 'pending' | 'accepted' | 'declined' | 'countered';
-}
-
-const initialOffers: Offer[] = [
-  { id: '1', from: 'Nigar A.', type: 'barter', item: 'Oak Dining Table', forItem: 'Mid-Century Sofa', status: 'pending' },
-  { id: '2', from: 'Elvin G.', type: 'price', amount: 750, forItem: 'Mid-Century Sofa', status: 'pending' },
-  { id: '3', from: 'Kamran S.', type: 'barter', item: 'Office Desk', forItem: 'Vintage Chair', status: 'accepted' },
-];
 
 const Dashboard = () => {
   const { t } = useLanguage();
   const { user, isAuthenticated, updatePassword, updatePhone, updateProfile, updateAvatar, updateAddress, logout } = useAuth();
   const { getOrdersByUser } = useOrders();
   const { getListingsByUser } = useListings();
+  const { getOffersBySeller, acceptOffer, declineOffer, counterOffer } = useOffers();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const userOrders = getOrdersByUser();
   const userListings = getListingsByUser();
+  const sellerOffers = getOffersBySeller();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'listings');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -65,9 +53,8 @@ const Dashboard = () => {
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [isAvatarLoading, setIsAvatarLoading] = useState(false);
   const [isAddressLoading, setIsAddressLoading] = useState(false);
-  const [offers, setOffers] = useState<Offer[]>(initialOffers);
   const [counterOfferId, setCounterOfferId] = useState<string | null>(null);
-  const [counterPrice, setCounterPrice] = useState('');
+  const [counterPriceInput, setCounterPriceInput] = useState('');
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const getStatusLabel = (status: string) => {
@@ -140,21 +127,21 @@ const Dashboard = () => {
   };
 
   const handleAcceptOffer = (offerId: string) => {
-    setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'accepted' as const } : o));
-    alert('Offer accepted!');
+    acceptOffer(offerId);
+    alert('Offer accepted and added to sales!');
   };
 
   const handleDeclineOffer = (offerId: string) => {
-    setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'declined' as const } : o));
+    declineOffer(offerId);
     alert('Offer declined');
   };
 
-  const handleCounterOffer = (offerId: string) => {
-    if (counterPrice) {
-      setOffers(prev => prev.map(o => o.id === offerId ? { ...o, status: 'countered' as const } : o));
-      alert(`Counter offer of ₼${counterPrice} sent!`);
+  const handleCounterOfferSubmit = (offerId: string) => {
+    if (counterPriceInput) {
+      counterOffer(offerId, parseFloat(counterPriceInput));
+      alert(`Counter offer of ₼${counterPriceInput} sent!`);
       setCounterOfferId(null);
-      setCounterPrice('');
+      setCounterPriceInput('');
     }
   };
 
@@ -562,71 +549,78 @@ const Dashboard = () => {
 
           {/* Offers Tab */}
           <TabsContent value="offers" className="mt-6">
-            <div className="space-y-4">
-              {offers.map((offer) => (
-                <div
-                  key={offer.id}
-                  className="p-4 bg-card border border-border rounded-xl"
-                >
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div>
-                      <p className="font-semibold text-foreground">{offer.from}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {offer.type === 'barter' 
-                          ? `Wants to trade "${offer.item}" for your "${offer.forItem}"`
-                          : `Offered ₼${offer.amount} for "${offer.forItem}"`
-                        }
-                      </p>
-                    </div>
-                    <Badge
-                      className={cn(
-                        offer.status === 'pending' && 'bg-primary/20 text-primary',
-                        offer.status === 'accepted' && 'bg-sage text-sage-dark',
-                        offer.status === 'declined' && 'bg-destructive/20 text-destructive',
-                        offer.status === 'countered' && 'bg-blue-100 text-blue-700'
-                      )}
-                    >
-                      {offer.status}
-                    </Badge>
-                  </div>
-                  {offer.status === 'pending' && (
-                    <>
-                      <div className="flex gap-2">
-                        <Button variant="hero" size="sm" className="gap-1" onClick={() => handleAcceptOffer(offer.id)}>
-                          <Check className="w-3 h-3" />
-                          Accept
-                        </Button>
-                        <Button variant="destructive" size="sm" className="gap-1" onClick={() => handleDeclineOffer(offer.id)}>
-                          <X className="w-3 h-3" />
-                          Decline
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => setCounterOfferId(counterOfferId === offer.id ? null : offer.id)}
-                        >
-                          Counter
-                        </Button>
+            {sellerOffers.length === 0 ? (
+              <div className="text-center py-12 bg-card border border-border rounded-xl">
+                <RefreshCw className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No offers yet</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {sellerOffers.map((offer) => (
+                  <div
+                    key={offer.id}
+                    className="p-4 bg-card border border-border rounded-xl"
+                  >
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div>
+                        <p className="font-semibold text-foreground">{offer.from}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {offer.type === 'barter' 
+                            ? `Wants to trade "${offer.item}" for your "${offer.forItem}"`
+                            : `Offered ₼${offer.amount} for "${offer.forItem}"`
+                          }
+                        </p>
                       </div>
-                      {counterOfferId === offer.id && (
-                        <div className="mt-3 flex gap-2 items-center">
-                          <Input
-                            type="number"
-                            placeholder="Enter counter price"
-                            value={counterPrice}
-                            onChange={(e) => setCounterPrice(e.target.value)}
-                            className="w-40"
-                          />
-                          <Button size="sm" onClick={() => handleCounterOffer(offer.id)}>
-                            Send
+                      <Badge
+                        className={cn(
+                          offer.status === 'pending' && 'bg-primary/20 text-primary',
+                          offer.status === 'accepted' && 'bg-sage text-sage-dark',
+                          offer.status === 'declined' && 'bg-destructive/20 text-destructive',
+                          offer.status === 'countered' && 'bg-blue-100 text-blue-700'
+                        )}
+                      >
+                        {offer.status}
+                      </Badge>
+                    </div>
+                    {offer.status === 'pending' && (
+                      <>
+                        <div className="flex gap-2">
+                          <Button variant="hero" size="sm" className="gap-1" onClick={() => handleAcceptOffer(offer.id)}>
+                            <Check className="w-3 h-3" />
+                            Accept
+                          </Button>
+                          <Button variant="destructive" size="sm" className="gap-1" onClick={() => handleDeclineOffer(offer.id)}>
+                            <X className="w-3 h-3" />
+                            Decline
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setCounterOfferId(counterOfferId === offer.id ? null : offer.id)}
+                          >
+                            Counter
                           </Button>
                         </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
+                        {counterOfferId === offer.id && (
+                          <div className="mt-3 flex gap-2 items-center">
+                            <Input
+                              type="number"
+                              placeholder="Enter counter price"
+                              value={counterPriceInput}
+                              onChange={(e) => setCounterPriceInput(e.target.value)}
+                              className="w-40"
+                            />
+                            <Button size="sm" onClick={() => handleCounterOfferSubmit(offer.id)}>
+                              Send
+                            </Button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           {/* Orders Tab */}
