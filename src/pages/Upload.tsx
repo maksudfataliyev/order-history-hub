@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useListings } from '@/contexts/ListingsContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { materials, colors } from '@/data/products';
 
 const categories = ['sofa', 'chair', 'table', 'bed', 'storage', 'desk'] as const;
 const conditions = ['new', 'likeNew', 'good', 'fair'] as const;
@@ -41,6 +42,9 @@ const Upload = () => {
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [depth, setDepth] = useState('');
+  const [weight, setWeight] = useState('');
+  const [material, setMaterial] = useState('');
+  const [color, setColor] = useState('');
   const [description, setDescription] = useState('');
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -89,6 +93,9 @@ const Upload = () => {
         height: parseFloat(height) || 0,
         depth: parseFloat(depth) || 0,
       },
+      weight: parseFloat(weight) || undefined,
+      material: material || undefined,
+      color: color || undefined,
       acceptsBarter: acceptBarter,
     });
 
@@ -105,6 +112,9 @@ const Upload = () => {
     setWidth('');
     setHeight('');
     setDepth('');
+    setWeight('');
+    setMaterial('');
+    setColor('');
     setDescription('');
     setImages([]);
     setAcceptBarter(true);
@@ -260,6 +270,53 @@ const Upload = () => {
                     onChange={(e) => setDepth(e.target.value)}
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Weight, Material, Color */}
+            <div className="grid sm:grid-cols-3 gap-6">
+              <div>
+                <Label htmlFor="weight">Weight (kg)</Label>
+                <Input 
+                  id="weight" 
+                  type="number" 
+                  placeholder="0" 
+                  className="mt-2" 
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="material">Material</Label>
+                <Select value={material} onValueChange={setMaterial}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Select material" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {materials.map(mat => (
+                      <SelectItem key={mat} value={mat} className="capitalize">
+                        {mat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="color">Color</Label>
+                <Select value={color} onValueChange={setColor}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Select color" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {colors.map(col => (
+                      <SelectItem key={col} value={col} className="capitalize">
+                        {col}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

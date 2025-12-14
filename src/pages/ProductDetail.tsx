@@ -296,6 +296,24 @@ const ProductDetail = () => {
                     {product.dimensions.width} × {product.dimensions.height} × {product.dimensions.depth} cm
                   </dd>
                 </div>
+                {product.weight && (
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Weight</dt>
+                    <dd className="font-semibold text-foreground">{product.weight} kg</dd>
+                  </div>
+                )}
+                {product.material && (
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Material</dt>
+                    <dd className="font-semibold text-foreground capitalize">{product.material}</dd>
+                  </div>
+                )}
+                {product.color && (
+                  <div>
+                    <dt className="text-sm text-muted-foreground">Color</dt>
+                    <dd className="font-semibold text-foreground capitalize">{product.color}</dd>
+                  </div>
+                )}
                 <div>
                   <dt className="text-sm text-muted-foreground">Barter</dt>
                   <dd className="font-semibold text-foreground">

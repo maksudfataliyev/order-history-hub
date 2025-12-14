@@ -17,6 +17,9 @@ export interface Listing {
     height: number;
     depth: number;
   };
+  weight?: number;
+  material?: string;
+  color?: string;
   acceptsBarter: boolean;
   status: ListingStatus;
   createdAt: string;
