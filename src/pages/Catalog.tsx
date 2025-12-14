@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, X, ChevronDown, ChevronUp, Weight, Palette, Layers } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { ProductCard } from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
 import {
   Pagination,
   PaginationContent,
@@ -20,7 +21,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { usePagination } from '@/hooks/use-pagination';
-import { mockProducts } from '@/data/products';
+import { mockProducts, materials, colors, weightRanges } from '@/data/products';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 
@@ -49,9 +50,17 @@ const Catalog = () => {
   const [search, setSearch] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [selectedWeightRanges, setSelectedWeightRanges] = useState<string[]>([]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
   const [currentPage, setCurrentPage] = useState(1);
   const [categoryOpen, setCategoryOpen] = useState(true);
   const [conditionOpen, setConditionOpen] = useState(true);
+  const [materialOpen, setMaterialOpen] = useState(false);
+  const [colorOpen, setColorOpen] = useState(false);
+  const [weightOpen, setWeightOpen] = useState(false);
+  const [priceOpen, setPriceOpen] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const toggleCategory = (cat: string) => {
@@ -66,19 +75,51 @@ const Catalog = () => {
     );
   };
 
+  const toggleMaterial = (mat: string) => {
+    setSelectedMaterials(prev => 
+      prev.includes(mat) ? prev.filter(m => m !== mat) : [...prev, mat]
+    );
+  };
+
+  const toggleColor = (col: string) => {
+    setSelectedColors(prev => 
+      prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]
+    );
+  };
+
+  const toggleWeightRange = (range: string) => {
+    setSelectedWeightRanges(prev => 
+      prev.includes(range) ? prev.filter(r => r !== range) : [...prev, range]
+    );
+  };
+
   const filteredProducts = useMemo(() => {
     return mockProducts.filter((product) => {
       const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(product.category);
       const matchesCondition = selectedConditions.length === 0 || selectedConditions.includes(product.condition);
-      return matchesSearch && matchesCategory && matchesCondition;
+      const matchesMaterial = selectedMaterials.length === 0 || (product.material && selectedMaterials.includes(product.material));
+      const matchesColor = selectedColors.length === 0 || (product.color && selectedColors.includes(product.color));
+      const matchesPrice = product.price >= priceRange[0] && product.price <= priceRange[1];
+      
+      let matchesWeight = true;
+      if (selectedWeightRanges.length > 0 && product.weight) {
+        matchesWeight = selectedWeightRanges.some(rangeLabel => {
+          const range = weightRanges.find(r => r.label === rangeLabel);
+          return range && product.weight! >= range.min && product.weight! <= range.max;
+        });
+      } else if (selectedWeightRanges.length > 0 && !product.weight) {
+        matchesWeight = false;
+      }
+      
+      return matchesSearch && matchesCategory && matchesCondition && matchesMaterial && matchesColor && matchesPrice && matchesWeight;
     });
-  }, [search, selectedCategories, selectedConditions]);
+  }, [search, selectedCategories, selectedConditions, selectedMaterials, selectedColors, selectedWeightRanges, priceRange]);
 
   // Reset to page 1 when filters change
   useMemo(() => {
     setCurrentPage(1);
-  }, [search, selectedCategories, selectedConditions]);
+  }, [search, selectedCategories, selectedConditions, selectedMaterials, selectedColors, selectedWeightRanges, priceRange]);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   
@@ -97,16 +138,44 @@ const Catalog = () => {
     setSearch('');
     setSelectedCategories([]);
     setSelectedConditions([]);
+    setSelectedMaterials([]);
+    setSelectedColors([]);
+    setSelectedWeightRanges([]);
+    setPriceRange([0, 2000]);
     setCurrentPage(1);
   };
 
-  const hasActiveFilters = search || selectedCategories.length > 0 || selectedConditions.length > 0;
+  const hasActiveFilters = search || selectedCategories.length > 0 || selectedConditions.length > 0 || 
+    selectedMaterials.length > 0 || selectedColors.length > 0 || selectedWeightRanges.length > 0 ||
+    priceRange[0] > 0 || priceRange[1] < 2000;
 
   const FiltersSidebar = () => (
     <div className="space-y-6">
+      {/* Price Range */}
+      <Collapsible open={priceOpen} onOpenChange={setPriceOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-semibold text-foreground hover:text-primary transition-colors">
+          {t.catalog.price || 'Price'}
+          {priceOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-4">
+          <Slider
+            value={priceRange}
+            onValueChange={(val) => setPriceRange(val as [number, number])}
+            min={0}
+            max={2000}
+            step={50}
+            className="w-full"
+          />
+          <div className="flex justify-between text-sm text-muted-foreground">
+            <span>₼{priceRange[0]}</span>
+            <span>₼{priceRange[1]}</span>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Categories */}
       <Collapsible open={categoryOpen} onOpenChange={setCategoryOpen}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-semibold text-foreground hover:text-primary transition-colors">
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-semibold text-foreground hover:text-primary transition-colors border-t pt-4">
           {t.catalog.category}
           {categoryOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </CollapsibleTrigger>
@@ -148,6 +217,98 @@ const Catalog = () => {
                 className="text-sm font-normal cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
               >
                 {getConditionLabel(cond, t)}
+              </Label>
+            </div>
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Materials */}
+      <Collapsible open={materialOpen} onOpenChange={setMaterialOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-semibold text-foreground hover:text-primary transition-colors border-t pt-4">
+          <span className="flex items-center gap-2">
+            <Layers className="w-4 h-4" />
+            Material
+          </span>
+          {materialOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-3">
+          {materials.map((mat) => (
+            <div key={mat} className="flex items-center space-x-3">
+              <Checkbox
+                id={`mat-${mat}`}
+                checked={selectedMaterials.includes(mat)}
+                onCheckedChange={() => toggleMaterial(mat)}
+              />
+              <Label
+                htmlFor={`mat-${mat}`}
+                className="text-sm font-normal cursor-pointer text-muted-foreground hover:text-foreground transition-colors capitalize"
+              >
+                {mat}
+              </Label>
+            </div>
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Colors */}
+      <Collapsible open={colorOpen} onOpenChange={setColorOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-semibold text-foreground hover:text-primary transition-colors border-t pt-4">
+          <span className="flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            Color
+          </span>
+          {colorOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-3">
+          {colors.map((col) => (
+            <div key={col} className="flex items-center space-x-3">
+              <Checkbox
+                id={`col-${col}`}
+                checked={selectedColors.includes(col)}
+                onCheckedChange={() => toggleColor(col)}
+              />
+              <Label
+                htmlFor={`col-${col}`}
+                className="text-sm font-normal cursor-pointer text-muted-foreground hover:text-foreground transition-colors capitalize flex items-center gap-2"
+              >
+                <span 
+                  className="w-4 h-4 rounded-full border border-border" 
+                  style={{ 
+                    backgroundColor: col === 'brown' ? '#8B4513' : 
+                      col === 'beige' ? '#F5F5DC' : 
+                      col === 'gray' ? '#808080' : col 
+                  }} 
+                />
+                {col}
+              </Label>
+            </div>
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Weight */}
+      <Collapsible open={weightOpen} onOpenChange={setWeightOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-semibold text-foreground hover:text-primary transition-colors border-t pt-4">
+          <span className="flex items-center gap-2">
+            <Weight className="w-4 h-4" />
+            Weight
+          </span>
+          {weightOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-3 space-y-3">
+          {weightRanges.map((range) => (
+            <div key={range.label} className="flex items-center space-x-3">
+              <Checkbox
+                id={`weight-${range.label}`}
+                checked={selectedWeightRanges.includes(range.label)}
+                onCheckedChange={() => toggleWeightRange(range.label)}
+              />
+              <Label
+                htmlFor={`weight-${range.label}`}
+                className="text-sm font-normal cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {range.label}
               </Label>
             </div>
           ))}
@@ -236,6 +397,49 @@ const Catalog = () => {
                     <X className="w-3 h-3" />
                   </Badge>
                 ))}
+                {selectedMaterials.map((mat) => (
+                  <Badge
+                    key={mat}
+                    variant="secondary"
+                    className="cursor-pointer gap-1 capitalize"
+                    onClick={() => toggleMaterial(mat)}
+                  >
+                    {mat}
+                    <X className="w-3 h-3" />
+                  </Badge>
+                ))}
+                {selectedColors.map((col) => (
+                  <Badge
+                    key={col}
+                    variant="secondary"
+                    className="cursor-pointer gap-1 capitalize"
+                    onClick={() => toggleColor(col)}
+                  >
+                    {col}
+                    <X className="w-3 h-3" />
+                  </Badge>
+                ))}
+                {selectedWeightRanges.map((range) => (
+                  <Badge
+                    key={range}
+                    variant="secondary"
+                    className="cursor-pointer gap-1"
+                    onClick={() => toggleWeightRange(range)}
+                  >
+                    {range}
+                    <X className="w-3 h-3" />
+                  </Badge>
+                ))}
+                {(priceRange[0] > 0 || priceRange[1] < 2000) && (
+                  <Badge
+                    variant="secondary"
+                    className="cursor-pointer gap-1"
+                    onClick={() => setPriceRange([0, 2000])}
+                  >
+                    ₼{priceRange[0]} - ₼{priceRange[1]}
+                    <X className="w-3 h-3" />
+                  </Badge>
+                )}
               </div>
             )}
 

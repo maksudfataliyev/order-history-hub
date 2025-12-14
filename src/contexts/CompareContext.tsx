@@ -13,6 +13,9 @@ export interface Product {
     height: number;
     depth: number;
   };
+  weight?: number; // in kg
+  material?: string;
+  color?: string;
   seller: string;
   description: string;
   acceptsBarter: boolean;

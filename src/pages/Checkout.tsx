@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Truck, CreditCard, MapPin, Check, User, Mail, Phone } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -15,7 +15,7 @@ import { OrderTracking } from '@/components/ui/order-tracking';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders, Order } from '@/contexts/OrderContext';
-import { toast } from '@/hooks/use-toast';
+import { useCart } from '@/contexts/CartContext';
 import { mockProducts } from '@/data/products';
 import { cn } from '@/lib/utils';
 
@@ -23,14 +23,38 @@ const Checkout = () => {
   const { t } = useLanguage();
   const { user, isAuthenticated } = useAuth();
   const { addOrder } = useOrders();
+  const { items: cartItems, clearCart } = useCart();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Check if coming from cart or single product
+  const fromCart = location.state?.fromCart;
   const productId = location.state?.productId;
-  const product = mockProducts.find(p => p.id === productId);
+  const singleProduct = productId ? mockProducts.find(p => p.id === productId) : null;
+  
+  // Determine items to checkout
+  const checkoutItems = useMemo(() => {
+    if (fromCart && cartItems.length > 0) {
+      return cartItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        image: item.image,
+      }));
+    } else if (singleProduct) {
+      return [{
+        id: singleProduct.id,
+        name: singleProduct.name,
+        price: singleProduct.price,
+        image: singleProduct.image,
+      }];
+    }
+    return [];
+  }, [fromCart, cartItems, singleProduct]);
 
   const [shippingMethod, setShippingMethod] = useState<'standard' | 'express' | 'sameDay'>('standard');
   const [orderPlaced, setOrderPlaced] = useState(false);
-  const [placedOrder, setPlacedOrder] = useState<Order | null>(null);
+  const [placedOrders, setPlacedOrders] = useState<Order[]>([]);
 
   // Azerbaijan phone regex: +994 XX XXX XX XX
   const phoneRegex = /^\+994\s?\d{2}\s?\d{3}\s?\d{2}\s?\d{2}$/;
@@ -118,11 +142,11 @@ const Checkout = () => {
     );
   }
 
-  if (!product) {
+  if (checkoutItems.length === 0) {
     return (
       <Layout>
         <div className="container-custom py-20 text-center">
-          <p className="text-muted-foreground">{t.checkout.noProduct}</p>
+          <p className="text-muted-foreground">{t.checkout.noProduct || 'No items to checkout'}</p>
           <Link to="/catalog">
             <Button variant="outline" className="mt-4">
               {t.compare.browseCatalog}
@@ -133,44 +157,53 @@ const Checkout = () => {
     );
   }
 
+  const subtotal = checkoutItems.reduce((sum, item) => sum + item.price, 0);
   const shippingCost = shippingPrices[shippingMethod];
-  const total = product.price + shippingCost;
+  const total = subtotal + shippingCost;
 
   const onSubmit = (data: CheckoutFormValues) => {
-    const order = addOrder({
-      productId: product.id,
-      productName: product.name,
-      productImage: product.image,
-      productPrice: product.price,
-      shippingMethod,
-      shippingCost,
-      total,
-      address: {
-        fullName: data.fullName,
-        street: data.street,
-        city: data.city,
-        phone: data.phone,
-        email: data.email,
-      },
+    const orders: Order[] = [];
+    
+    // Create an order for each item
+    checkoutItems.forEach(item => {
+      const order = addOrder({
+        productId: item.id,
+        productName: item.name,
+        productImage: item.image,
+        productPrice: item.price,
+        shippingMethod,
+        shippingCost: shippingCost / checkoutItems.length, // Split shipping
+        total: item.price + (shippingCost / checkoutItems.length),
+        address: {
+          fullName: data.fullName,
+          street: data.street,
+          city: data.city,
+          phone: data.phone,
+          email: data.email,
+        },
+      });
+      orders.push(order);
     });
 
-    setPlacedOrder(order);
+    // Clear cart if coming from cart
+    if (fromCart) {
+      clearCart();
+    }
+
+    setPlacedOrders(orders);
     setOrderPlaced(true);
-    toast({
-      title: t.checkout.success,
-      description: t.checkout.orderPlaced,
-    });
+    alert(t.checkout.orderPlaced || 'Order placed successfully!');
   };
 
   const orderSteps = [
-    { name: t.checkout.orderPlacedStep, timestamp: placedOrder ? new Date(placedOrder.createdAt).toLocaleString() : new Date().toLocaleString(), isCompleted: true },
+    { name: t.checkout.orderPlacedStep, timestamp: placedOrders.length > 0 ? new Date(placedOrders[0].createdAt).toLocaleString() : new Date().toLocaleString(), isCompleted: true },
     { name: t.checkout.confirmed, timestamp: t.checkout.pending, isCompleted: false },
     { name: t.checkout.shipped, timestamp: t.checkout.pending, isCompleted: false },
     { name: t.checkout.outForDelivery, timestamp: t.checkout.pending, isCompleted: false },
     { name: t.checkout.delivered, timestamp: t.checkout.pending, isCompleted: false },
   ];
 
-  if (orderPlaced && placedOrder) {
+  if (orderPlaced && placedOrders.length > 0) {
     return (
       <Layout>
         <div className="container-custom py-8 max-w-2xl mx-auto">
@@ -187,7 +220,7 @@ const Checkout = () => {
             </h1>
             <p className="text-muted-foreground">{t.checkout.orderConfirmation}</p>
             <p className="text-sm text-muted-foreground mt-2">
-              {t.checkout.orderNumber || 'Order'}: #{placedOrder.id.slice(0, 8).toUpperCase()}
+              {placedOrders.length} {placedOrders.length === 1 ? 'order' : 'orders'} placed
             </p>
           </motion.div>
 
@@ -205,34 +238,39 @@ const Checkout = () => {
               <CardTitle>{t.checkout.orderSummary}</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-4 mb-4">
-                <img
-                  src={placedOrder.productImage}
-                  alt={placedOrder.productName}
-                  className="w-20 h-20 object-cover rounded-lg"
-                />
-                <div>
-                  <p className="font-semibold text-foreground">{placedOrder.productName}</p>
-                  <p className="text-primary font-display">₼{placedOrder.productPrice}</p>
-                </div>
+              <div className="space-y-4 mb-4">
+                {placedOrders.map((order) => (
+                  <div key={order.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                    <img
+                      src={order.productImage}
+                      alt={order.productName}
+                      className="w-16 h-16 object-cover rounded-lg"
+                    />
+                    <div className="flex-1">
+                      <p className="font-semibold text-foreground">{order.productName}</p>
+                      <p className="text-sm text-muted-foreground">#{order.id.slice(0, 8).toUpperCase()}</p>
+                    </div>
+                    <p className="text-primary font-display">₼{order.productPrice}</p>
+                  </div>
+                ))}
               </div>
               <div className="border-t border-border pt-4 space-y-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{t.checkout.shipping}</span>
-                  <span>₼{placedOrder.shippingCost}</span>
+                  <span>₼{shippingCost}</span>
                 </div>
                 <div className="flex justify-between font-semibold text-lg">
                   <span>{t.checkout.total}</span>
-                  <span className="text-primary">₼{placedOrder.total}</span>
+                  <span className="text-primary">₼{total}</span>
                 </div>
               </div>
               
               <div className="border-t border-border pt-4 mt-4">
                 <h4 className="font-semibold text-foreground mb-2">{t.checkout.deliveryAddress || 'Delivery Address'}</h4>
-                <p className="text-sm text-muted-foreground">{placedOrder.address.fullName}</p>
-                <p className="text-sm text-muted-foreground">{placedOrder.address.street}</p>
-                <p className="text-sm text-muted-foreground">{placedOrder.address.city}</p>
-                <p className="text-sm text-muted-foreground">{placedOrder.address.phone}</p>
+                <p className="text-sm text-muted-foreground">{placedOrders[0].address.fullName}</p>
+                <p className="text-sm text-muted-foreground">{placedOrders[0].address.street}</p>
+                <p className="text-sm text-muted-foreground">{placedOrders[0].address.city}</p>
+                <p className="text-sm text-muted-foreground">{placedOrders[0].address.phone}</p>
               </div>
             </CardContent>
           </Card>
@@ -257,12 +295,10 @@ const Checkout = () => {
   return (
     <Layout>
       <div className="container-custom py-8">
-        <Link to={`/product/${product.id}`}>
-          <Button variant="ghost" className="mb-6 gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            {t.checkout.backToProduct}
-          </Button>
-        </Link>
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6 gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          {t.checkout.backToProduct || 'Back'}
+        </Button>
 
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className="grid lg:grid-cols-3 gap-8">
@@ -445,22 +481,26 @@ const Checkout = () => {
                   <CardTitle>{t.checkout.orderSummary}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-4 mb-6">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-20 h-20 object-cover rounded-lg"
-                    />
-                    <div>
-                      <p className="font-semibold text-foreground line-clamp-2">{product.name}</p>
-                      <p className="text-primary font-display">₼{product.price}</p>
-                    </div>
+                  <div className="space-y-4 mb-6 max-h-[300px] overflow-y-auto">
+                    {checkoutItems.map((item) => (
+                      <div key={item.id} className="flex items-center gap-4">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-foreground line-clamp-2 text-sm">{item.name}</p>
+                          <p className="text-primary font-display">₼{item.price}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="space-y-3 border-t border-border pt-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{t.checkout.subtotal}</span>
-                      <span>₼{product.price}</span>
+                      <span className="text-muted-foreground">{t.checkout.subtotal} ({checkoutItems.length} items)</span>
+                      <span>₼{subtotal}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">{t.checkout.shipping}</span>
