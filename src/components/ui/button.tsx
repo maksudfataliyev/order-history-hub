@@ -16,7 +16,7 @@ const buttonVariants = cva(
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "text-primary underline-offset-4 hover:underline",
         hero: "bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-medium hover:shadow-strong hover:scale-105 transform",
-        sage: "bg-sage text-sage-dark hover:bg-sage-dark hover:text-sage shadow-soft",
+        sage: "bg-primary text-primary-foreground hover:bg-primary/80 shadow-soft",
         terracotta: "bg-terracotta text-primary-foreground hover:bg-terracotta-dark shadow-soft",
       },
       size: {

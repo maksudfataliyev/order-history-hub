@@ -39,12 +39,13 @@ const Dashboard = () => {
   const { user, isAuthenticated, updatePassword, updatePhone, updateProfile, updateAvatar, updateAddress, logout } = useAuth();
   const { getOrdersByUser } = useOrders();
   const { getListingsByUser } = useListings();
-  const { getOffersBySeller, acceptOffer, declineOffer, counterOffer } = useOffers();
+  const { getOffersBySeller, getOffersByBuyer, acceptOffer, declineOffer, counterOffer } = useOffers();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const userOrders = getOrdersByUser();
   const userListings = getListingsByUser();
   const sellerOffers = getOffersBySeller();
+  const buyerOffers = getOffersByBuyer();
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'listings');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -432,6 +433,13 @@ const Dashboard = () => {
                 <Badge className="ml-1 bg-sage text-sage-dark">{sellerOffers.filter(o => o.status === 'pending').length}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="myoffers" className="gap-2">
+              <RefreshCw className="w-4 h-4" />
+              <span className="hidden sm:inline">My Offers</span>
+              {buyerOffers.length > 0 && (
+                <Badge className="ml-1 bg-blue-100 text-blue-700">{buyerOffers.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="orders" className="gap-2">
               <ShoppingBag className="w-4 h-4" />
               <span className="hidden sm:inline">{t.dashboard.orders}</span>
@@ -601,6 +609,57 @@ const Dashboard = () => {
                         )}
                       </>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* My Offers Tab (offers I made as buyer) */}
+          <TabsContent value="myoffers" className="mt-6">
+            {buyerOffers.length === 0 ? (
+              <div className="text-center py-12 bg-card border border-border rounded-xl">
+                <RefreshCw className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">You haven't made any offers yet</p>
+                <Link to="/catalog">
+                  <Button variant="outline" className="mt-4">
+                    Browse Catalog
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {buyerOffers.map((offer) => (
+                  <div
+                    key={offer.id}
+                    className="p-4 bg-card border border-border rounded-xl"
+                  >
+                    <div className="flex items-start gap-4">
+                      <img
+                        src={offer.forItemImage}
+                        alt={offer.forItem}
+                        className="w-16 h-16 object-cover rounded-lg"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-foreground truncate">{offer.forItem}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Your offer: ₼{offer.amount} (Listed at ₼{offer.forItemPrice})
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Sent: {new Date(offer.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge
+                        className={cn(
+                          offer.status === 'pending' && 'bg-yellow-100 text-yellow-700',
+                          offer.status === 'accepted' && 'bg-sage text-sage-dark',
+                          offer.status === 'declined' && 'bg-destructive/20 text-destructive',
+                          offer.status === 'countered' && 'bg-blue-100 text-blue-700'
+                        )}
+                      >
+                        {offer.status === 'countered' ? `Counter: ₼${offer.counterAmount}` : offer.status}
+                      </Badge>
+                    </div>
                   </div>
                 ))}
               </div>
