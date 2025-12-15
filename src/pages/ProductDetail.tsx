@@ -15,6 +15,7 @@ import { useCart } from '@/contexts/CartContext';
 import { useComments } from '@/contexts/CommentsContext';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { MakeOfferDialog } from '@/components/MakeOfferDialog';
 
 const getConditionLabel = (condition: string, t: ReturnType<typeof useLanguage>['t']) => {
   const conditionMap: Record<string, string> = {
@@ -74,7 +75,7 @@ const ProductDetail = () => {
     });
   };
 
-  const handleMakeOffer = () => {
+  const handleMakeOfferClick = () => {
     if (!isAuthenticated) {
       toast({
         title: 'Login Required',
@@ -83,10 +84,6 @@ const ProductDetail = () => {
       navigate('/auth');
       return;
     }
-    toast({
-      title: 'Offer Feature',
-      description: 'Barter offer system coming soon!',
-    });
   };
 
   const handleAddToCart = () => {
@@ -230,8 +227,16 @@ const ProductDetail = () => {
                 {inCart ? <Check className="w-5 h-5 mr-2" /> : <Plus className="w-5 h-5 mr-2" />}
                 {inCart ? 'In Cart' : (t.cart?.addToCart || 'Add to Cart')}
               </Button>
-              {product.acceptsBarter && (
-                <Button variant="sage" size="lg" className="flex-1" onClick={handleMakeOffer}>
+              {product.acceptsBarter && isAuthenticated && (
+                <MakeOfferDialog product={{ ...product, sellerId: 'seller-1' }}>
+                  <Button variant="sage" size="lg" className="flex-1">
+                    <RefreshCw className="w-5 h-5 mr-2" />
+                    {t.product.makeOffer}
+                  </Button>
+                </MakeOfferDialog>
+              )}
+              {product.acceptsBarter && !isAuthenticated && (
+                <Button variant="sage" size="lg" className="flex-1" onClick={handleMakeOfferClick}>
                   <RefreshCw className="w-5 h-5 mr-2" />
                   {t.product.makeOffer}
                 </Button>
