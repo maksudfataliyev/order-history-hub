@@ -231,32 +231,26 @@ const Catalog = () => {
   const FiltersSidebar = () => (
     <div className="space-y-6">
       {/* Price Range */}
-      <Collapsible open={priceOpen} onOpenChange={setPriceOpen}>
-        <CollapsibleTrigger className="flex items-center justify-between w-full py-2 font-semibold text-foreground hover:text-primary transition-colors">
-          {t.catalog.price || 'Price'}
-          {priceOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-3 space-y-4">
-          <div className="flex gap-2 items-center">
-            <Input
-              type="number"
-              placeholder="Min"
-              value={pendingPriceMin}
-              onChange={(e) => setPendingPriceMin(e.target.value)}
-              className="w-full"
-            />
-            <span className="text-muted-foreground">-</span>
-            <Input
-              type="number"
-              placeholder="Max"
-              value={pendingPriceMax}
-              onChange={(e) => setPendingPriceMax(e.target.value)}
-              className="w-full"
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">Enter min and max price in ₼</p>
-        </CollapsibleContent>
-      </Collapsible>
+      <div className="space-y-4 pb-2 border-b border-border mb-4">
+        <p className="font-semibold text-foreground">{t.catalog.price || 'Price'} (₼)</p>
+        <div className="flex gap-2 items-center">
+          <Input
+            type="number"
+            placeholder="Min"
+            value={pendingPriceMin}
+            onChange={(e) => setPendingPriceMin(e.target.value)}
+            className="w-full"
+          />
+          <span className="text-muted-foreground">-</span>
+          <Input
+            type="number"
+            placeholder="Max"
+            value={pendingPriceMax}
+            onChange={(e) => setPendingPriceMax(e.target.value)}
+            className="w-full"
+          />
+        </div>
+      </div>
 
       {/* Categories */}
       <Collapsible open={categoryOpen} onOpenChange={setCategoryOpen}>
