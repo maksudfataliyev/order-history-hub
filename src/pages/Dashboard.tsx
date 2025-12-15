@@ -16,6 +16,7 @@ import { useOrders, Order } from '@/contexts/OrderContext';
 import { useListings, ListingStatus } from '@/contexts/ListingsContext';
 import { useOffers } from '@/contexts/OffersContext';
 import { OrderDetailDialog } from '@/components/OrderDetailDialog';
+import { ChatSection } from '@/components/ChatSection';
 import { mockProducts } from '@/data/products';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -527,31 +528,7 @@ const Dashboard = () => {
 
           {/* Messages Tab */}
           <TabsContent value="messages" className="mt-6">
-            <div className="space-y-3">
-              {mockMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    'flex items-start gap-4 p-4 rounded-xl border transition-colors cursor-pointer',
-                    msg.unread ? 'bg-primary/5 border-primary/20' : 'bg-card border-border'
-                  )}
-                >
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <span className="font-semibold text-muted-foreground">
-                      {msg.from.charAt(0)}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-semibold text-foreground">{msg.from}</span>
-                      {msg.unread && <Badge className="bg-primary text-primary-foreground text-xs">New</Badge>}
-                    </div>
-                    <p className="text-sm text-muted-foreground truncate">{msg.message}</p>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{msg.time}</span>
-                </div>
-              ))}
-            </div>
+            <ChatSection />
           </TabsContent>
 
           {/* Offers Tab */}

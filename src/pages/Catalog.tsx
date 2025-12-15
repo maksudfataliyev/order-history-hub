@@ -63,34 +63,97 @@ const Catalog = () => {
   const [priceOpen, setPriceOpen] = useState(false);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  const toggleCategory = (cat: string) => {
-    setSelectedCategories(prev => 
+  // Pending filter state (before Apply)
+  const [pendingCategories, setPendingCategories] = useState<string[]>([]);
+  const [pendingConditions, setPendingConditions] = useState<string[]>([]);
+  const [pendingMaterials, setPendingMaterials] = useState<string[]>([]);
+  const [pendingColors, setPendingColors] = useState<string[]>([]);
+  const [pendingWeightRanges, setPendingWeightRanges] = useState<string[]>([]);
+  const [pendingPriceMin, setPendingPriceMin] = useState('0');
+  const [pendingPriceMax, setPendingPriceMax] = useState('2000');
+
+  const togglePendingCategory = (cat: string) => {
+    setPendingCategories(prev => 
       prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
     );
   };
 
-  const toggleCondition = (cond: string) => {
-    setSelectedConditions(prev => 
+  const togglePendingCondition = (cond: string) => {
+    setPendingConditions(prev => 
       prev.includes(cond) ? prev.filter(c => c !== cond) : [...prev, cond]
     );
   };
 
-  const toggleMaterial = (mat: string) => {
-    setSelectedMaterials(prev => 
+  const togglePendingMaterial = (mat: string) => {
+    setPendingMaterials(prev => 
       prev.includes(mat) ? prev.filter(m => m !== mat) : [...prev, mat]
     );
   };
 
-  const toggleColor = (col: string) => {
-    setSelectedColors(prev => 
+  const togglePendingColor = (col: string) => {
+    setPendingColors(prev => 
       prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]
     );
   };
 
-  const toggleWeightRange = (range: string) => {
-    setSelectedWeightRanges(prev => 
+  const togglePendingWeightRange = (range: string) => {
+    setPendingWeightRanges(prev => 
       prev.includes(range) ? prev.filter(r => r !== range) : [...prev, range]
     );
+  };
+
+  const applyFilters = () => {
+    setSelectedCategories(pendingCategories);
+    setSelectedConditions(pendingConditions);
+    setSelectedMaterials(pendingMaterials);
+    setSelectedColors(pendingColors);
+    setSelectedWeightRanges(pendingWeightRanges);
+    const minPrice = Math.max(0, parseInt(pendingPriceMin) || 0);
+    const maxPrice = Math.min(10000, parseInt(pendingPriceMax) || 2000);
+    setPriceRange([minPrice, maxPrice]);
+    setCurrentPage(1);
+    setShowMobileFilters(false);
+  };
+
+  // Keep legacy toggle functions for removing active filter badges
+  const toggleCategory = (cat: string) => {
+    setSelectedCategories(prev => {
+      const newVal = prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat];
+      setPendingCategories(newVal);
+      return newVal;
+    });
+  };
+
+  const toggleCondition = (cond: string) => {
+    setSelectedConditions(prev => {
+      const newVal = prev.includes(cond) ? prev.filter(c => c !== cond) : [...prev, cond];
+      setPendingConditions(newVal);
+      return newVal;
+    });
+  };
+
+  const toggleMaterial = (mat: string) => {
+    setSelectedMaterials(prev => {
+      const newVal = prev.includes(mat) ? prev.filter(m => m !== mat) : [...prev, mat];
+      setPendingMaterials(newVal);
+      return newVal;
+    });
+  };
+
+  const toggleColor = (col: string) => {
+    setSelectedColors(prev => {
+      const newVal = prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col];
+      setPendingColors(newVal);
+      return newVal;
+    });
+  };
+
+  const toggleWeightRange = (range: string) => {
+    setSelectedWeightRanges(prev => {
+      const newVal = prev.includes(range) ? prev.filter(r => r !== range) : [...prev, range];
+      setPendingWeightRanges(newVal);
+      return newVal;
+    });
   };
 
   const filteredProducts = useMemo(() => {
@@ -142,12 +205,28 @@ const Catalog = () => {
     setSelectedColors([]);
     setSelectedWeightRanges([]);
     setPriceRange([0, 2000]);
+    setPendingCategories([]);
+    setPendingConditions([]);
+    setPendingMaterials([]);
+    setPendingColors([]);
+    setPendingWeightRanges([]);
+    setPendingPriceMin('0');
+    setPendingPriceMax('2000');
     setCurrentPage(1);
   };
 
   const hasActiveFilters = search || selectedCategories.length > 0 || selectedConditions.length > 0 || 
     selectedMaterials.length > 0 || selectedColors.length > 0 || selectedWeightRanges.length > 0 ||
     priceRange[0] > 0 || priceRange[1] < 2000;
+
+  const hasPendingChanges = 
+    JSON.stringify(pendingCategories) !== JSON.stringify(selectedCategories) ||
+    JSON.stringify(pendingConditions) !== JSON.stringify(selectedConditions) ||
+    JSON.stringify(pendingMaterials) !== JSON.stringify(selectedMaterials) ||
+    JSON.stringify(pendingColors) !== JSON.stringify(selectedColors) ||
+    JSON.stringify(pendingWeightRanges) !== JSON.stringify(selectedWeightRanges) ||
+    parseInt(pendingPriceMin) !== priceRange[0] ||
+    parseInt(pendingPriceMax) !== priceRange[1];
 
   const FiltersSidebar = () => (
     <div className="space-y-6">
@@ -158,18 +237,24 @@ const Catalog = () => {
           {priceOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-3 space-y-4">
-          <Slider
-            value={priceRange}
-            onValueChange={(val) => setPriceRange(val as [number, number])}
-            min={0}
-            max={2000}
-            step={50}
-            className="w-full"
-          />
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>₼{priceRange[0]}</span>
-            <span>₼{priceRange[1]}</span>
+          <div className="flex gap-2 items-center">
+            <Input
+              type="number"
+              placeholder="Min"
+              value={pendingPriceMin}
+              onChange={(e) => setPendingPriceMin(e.target.value)}
+              className="w-full"
+            />
+            <span className="text-muted-foreground">-</span>
+            <Input
+              type="number"
+              placeholder="Max"
+              value={pendingPriceMax}
+              onChange={(e) => setPendingPriceMax(e.target.value)}
+              className="w-full"
+            />
           </div>
+          <p className="text-xs text-muted-foreground">Enter min and max price in ₼</p>
         </CollapsibleContent>
       </Collapsible>
 
@@ -184,8 +269,8 @@ const Catalog = () => {
             <div key={cat} className="flex items-center space-x-3">
               <Checkbox
                 id={`cat-${cat}`}
-                checked={selectedCategories.includes(cat)}
-                onCheckedChange={() => toggleCategory(cat)}
+                checked={pendingCategories.includes(cat)}
+                onCheckedChange={() => togglePendingCategory(cat)}
               />
               <Label
                 htmlFor={`cat-${cat}`}
@@ -209,8 +294,8 @@ const Catalog = () => {
             <div key={cond} className="flex items-center space-x-3">
               <Checkbox
                 id={`cond-${cond}`}
-                checked={selectedConditions.includes(cond)}
-                onCheckedChange={() => toggleCondition(cond)}
+                checked={pendingConditions.includes(cond)}
+                onCheckedChange={() => togglePendingCondition(cond)}
               />
               <Label
                 htmlFor={`cond-${cond}`}
@@ -237,8 +322,8 @@ const Catalog = () => {
             <div key={mat} className="flex items-center space-x-3">
               <Checkbox
                 id={`mat-${mat}`}
-                checked={selectedMaterials.includes(mat)}
-                onCheckedChange={() => toggleMaterial(mat)}
+                checked={pendingMaterials.includes(mat)}
+                onCheckedChange={() => togglePendingMaterial(mat)}
               />
               <Label
                 htmlFor={`mat-${mat}`}
@@ -265,8 +350,8 @@ const Catalog = () => {
             <div key={col} className="flex items-center space-x-3">
               <Checkbox
                 id={`col-${col}`}
-                checked={selectedColors.includes(col)}
-                onCheckedChange={() => toggleColor(col)}
+                checked={pendingColors.includes(col)}
+                onCheckedChange={() => togglePendingColor(col)}
               />
               <Label
                 htmlFor={`col-${col}`}
@@ -301,8 +386,8 @@ const Catalog = () => {
             <div key={range.label} className="flex items-center space-x-3">
               <Checkbox
                 id={`weight-${range.label}`}
-                checked={selectedWeightRanges.includes(range.label)}
-                onCheckedChange={() => toggleWeightRange(range.label)}
+                checked={pendingWeightRanges.includes(range.label)}
+                onCheckedChange={() => togglePendingWeightRange(range.label)}
               />
               <Label
                 htmlFor={`weight-${range.label}`}
@@ -315,9 +400,14 @@ const Catalog = () => {
         </CollapsibleContent>
       </Collapsible>
 
+      {/* Apply Filters Button */}
+      <Button variant="hero" onClick={applyFilters} className="w-full mt-4">
+        Apply Filters
+      </Button>
+
       {/* Clear Filters */}
       {hasActiveFilters && (
-        <Button variant="outline" onClick={clearFilters} className="w-full gap-2 mt-4">
+        <Button variant="outline" onClick={clearFilters} className="w-full gap-2">
           <X className="w-4 h-4" />
           {t.catalog.clear || 'Clear Filters'}
         </Button>
